@@ -507,6 +507,11 @@ function renderToday() {
         <div class="today-date">${dateStr}</div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        <button class="reset-btn" onclick="openSettingsModal()" title="Settings & Backup">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+        </button>
         ${done > 0 ? `<button class="reset-btn" onclick="resetToday()" title="Reset all tasks">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
@@ -1119,6 +1124,89 @@ function saveTask() {
   persist();
   closeModal();
   render();
+}
+
+// ─── Settings / Backup ────────────────────────────────────────────────────────
+function openSettingsModal() {
+  document.getElementById('modal').innerHTML = `<div class="modal-inner">
+    <div class="modal-title">Settings</div>
+    <div style="font-size:12px;font-weight:700;color:var(--sub);letter-spacing:.6px;text-transform:uppercase;margin-bottom:12px">Backup &amp; Restore</div>
+    <button onclick="exportBackup()" style="width:100%;padding:18px;border-radius:18px;background:var(--pl);border:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:14px;margin-bottom:12px;text-align:left">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--p)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+      <div>
+        <div style="font-size:17px;font-weight:700;color:var(--p)">Export Backup</div>
+        <div style="font-size:13px;color:var(--sub);margin-top:2px">Save all data as a file to Files app</div>
+      </div>
+    </button>
+    <button onclick="importBackup()" style="width:100%;padding:18px;border-radius:18px;background:var(--bg);border:2px solid var(--border);cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:14px;margin-bottom:24px;text-align:left">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--sub)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+      <div>
+        <div style="font-size:17px;font-weight:700;color:var(--text)">Import Backup</div>
+        <div style="font-size:13px;color:var(--sub);margin-top:2px">Restore data from a saved file</div>
+      </div>
+    </button>
+    <div style="font-size:13px;color:#BBB;line-height:1.6;text-align:center">
+      Your data stays on your device. Export before getting a new phone or reinstalling.
+    </div>
+  </div>`;
+  openModal();
+}
+
+function exportBackup() {
+  const data = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    routines: S.routines,
+    habits: S.habits,
+    completions: S.completions,
+    meals: S.meals,
+    tasks: S.tasks,
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `my-routines-${todayKey()}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function importBackup() {
+  const input  = document.createElement('input');
+  input.type   = 'file';
+  input.accept = '.json,application/json';
+  input.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (!confirm('This will replace all your current data with the backup. Continue?')) return;
+        if (Array.isArray(data.routines))                              S.routines    = data.routines;
+        if (Array.isArray(data.habits))                                S.habits      = data.habits;
+        if (data.completions && typeof data.completions === 'object')  S.completions = data.completions;
+        if (data.meals       && typeof data.meals       === 'object')  S.meals       = data.meals;
+        if (Array.isArray(data.tasks))                                 S.tasks       = data.tasks;
+        persist();
+        closeModal();
+        render();
+        alert('Backup restored successfully!');
+      } catch {
+        alert('Could not read the file. Make sure it\'s a valid backup.');
+      }
+    };
+    reader.readAsText(file);
+  };
+  document.body.appendChild(input);
+  input.click();
+  document.body.removeChild(input);
 }
 
 // ─── Modal helpers ─────────────────────────────────────────────────────────────
