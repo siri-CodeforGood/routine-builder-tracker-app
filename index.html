@@ -18,183 +18,348 @@
   --border:#EFEFEF;
   --safe-top:env(safe-area-inset-top,20px);
   --safe-bot:env(safe-area-inset-bottom,0px);
+  --tab-h:58px;
+  --gutter:18px;
 }
 html,body{height:100%;overflow:hidden;background:var(--bg)}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:var(--text);display:flex;flex-direction:column}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',sans-serif;
+  font-size:17px;color:var(--text);
+  display:flex;flex-direction:column;
+  -webkit-font-smoothing:antialiased;
+}
 
 /* ─── Layout ─── */
 #app{flex:1;display:flex;flex-direction:column;overflow:hidden}
-#screen{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(72px + var(--safe-bot))}
-.page{padding:0 0 24px}
+#screen{
+  flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding-bottom:calc(var(--tab-h) + var(--safe-bot) + 16px);
+}
 
 /* ─── Tab bar ─── */
 #tabbar{
   position:fixed;bottom:0;left:0;right:0;
-  background:rgba(255,255,255,0.92);
-  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
-  border-top:1px solid var(--border);
+  background:rgba(250,250,252,0.94);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-top:1px solid rgba(0,0,0,.08);
   display:flex;
   padding-bottom:var(--safe-bot);
   z-index:100;
+  height:calc(var(--tab-h) + var(--safe-bot));
 }
-.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 0 8px;cursor:pointer;gap:3px}
-.tab svg{width:24px;height:24px;transition:transform .15s}
-.tab span{font-size:10px;font-weight:600;color:var(--sub)}
-.tab.active svg{transform:scale(1.1)}
-.tab.active span{color:var(--p)}
+.tab{
+  flex:1;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;padding:8px 0 4px;cursor:pointer;gap:4px;
+  min-height:44px;
+}
+.tab svg{width:26px;height:26px;transition:transform .2s,color .2s}
+.tab span{font-size:11px;font-weight:600;letter-spacing:.2px;transition:color .2s}
+.tab.active svg{transform:scale(1.08)}
 
-/* ─── Page header ─── */
+/* ─── Sticky page header ─── */
 .ph{
-  padding:calc(var(--safe-top) + 16px) 20px 12px;
+  padding:calc(var(--safe-top) + 20px) var(--gutter) 14px;
   display:flex;align-items:flex-end;justify-content:space-between;
-  position:sticky;top:0;
-  background:var(--bg);
-  z-index:10;
+  position:sticky;top:0;background:var(--bg);z-index:10;
 }
-.ph h1{font-size:30px;font-weight:800}
-.ph-right{display:flex;align-items:center;gap:10px}
+.ph h1{font-size:32px;font-weight:800;letter-spacing:-.5px}
+.ph-sub{font-size:14px;color:var(--sub);margin-top:3px}
 .fab{
-  width:42px;height:42px;border-radius:21px;
+  width:46px;height:46px;border-radius:23px;
   background:var(--p);border:none;cursor:pointer;
   display:flex;align-items:center;justify-content:center;
-  box-shadow:0 6px 16px rgba(108,99,255,.35);
-  transition:transform .12s;flex-shrink:0;
+  box-shadow:0 6px 18px rgba(108,99,255,.38);
+  transition:transform .15s,box-shadow .15s;flex-shrink:0;
 }
-.fab:active{transform:scale(.92)}
-.fab svg{width:20px;height:20px}
+.fab:active{transform:scale(.9);box-shadow:0 2px 8px rgba(108,99,255,.3)}
+.fab svg{width:22px;height:22px}
 
-/* ─── Card ─── */
-.card{
-  background:var(--card);border-radius:20px;padding:18px;
-  box-shadow:0 2px 12px rgba(0,0,0,.06);margin-bottom:14px;
+/* ─── Cards container ─── */
+.cards{padding:4px var(--gutter) 0}
+
+/* ─── Today header ─── */
+.today-header{
+  padding:calc(var(--safe-top) + 20px) var(--gutter) 8px;
+  display:flex;align-items:flex-start;justify-content:space-between;
+  gap:12px;
 }
-.cards{padding:0 16px}
+.today-greeting{font-size:30px;font-weight:800;letter-spacing:-.5px;line-height:1.1}
+.today-date{font-size:15px;color:var(--sub);margin-top:4px;font-weight:500}
+.today-pill{
+  background:var(--p);color:#fff;font-weight:700;font-size:14px;
+  padding:7px 14px;border-radius:22px;white-space:nowrap;flex-shrink:0;
+  margin-top:4px;
+  box-shadow:0 4px 12px rgba(108,99,255,.3);
+}
+.reset-btn{
+  width:36px;height:36px;border-radius:18px;border:none;cursor:pointer;
+  background:rgba(0,0,0,.06);display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;margin-top:4px;transition:background .15s,transform .15s;
+}
+.reset-btn:active{background:rgba(0,0,0,.12);transform:rotate(-45deg)}
 
-/* ─── Today ─── */
-.today-header{padding:calc(var(--safe-top)+16px) 20px 4px}
-.today-greeting{font-size:26px;font-weight:800}
-.today-date{font-size:14px;color:var(--sub);margin-top:2px}
-.today-pill{background:var(--p);color:#fff;font-weight:700;font-size:13px;padding:5px 12px;border-radius:20px;white-space:nowrap}
-
-.routine-card{background:var(--card);border-radius:20px;padding:18px;box-shadow:0 2px 12px rgba(0,0,0,.06);margin-bottom:14px}
+/* ─── Routine cards (Today view) ─── */
+.routine-card{
+  background:var(--card);border-radius:22px;padding:20px;
+  box-shadow:0 2px 16px rgba(0,0,0,.07);margin-bottom:16px;
+}
 .routine-card.all-done{border:2px solid var(--ok)}
-.rc-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
-.rc-emoji{font-size:28px;flex-shrink:0}
-.rc-meta{flex:1}
-.rc-name{font-size:17px;font-weight:700}
-.rc-time{font-size:12px;color:var(--sub);margin-top:2px}
-.rc-count{font-size:13px;font-weight:700;color:var(--p);white-space:nowrap}
+.rc-head{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.rc-emoji{font-size:32px;flex-shrink:0;line-height:1}
+.rc-meta{flex:1;min-width:0}
+.rc-name{font-size:18px;font-weight:700;letter-spacing:-.2px}
+.rc-time{font-size:13px;color:var(--sub);margin-top:3px;font-weight:500}
+.rc-count{font-size:15px;font-weight:800;color:var(--p);white-space:nowrap}
 .rc-count.done-count{color:var(--ok)}
-.prog-bar{height:5px;background:#EEE;border-radius:3px;margin-bottom:14px;overflow:hidden}
-.prog-fill{height:100%;background:var(--p);border-radius:3px;transition:width .3s}
+.prog-bar{height:6px;background:#E8E8EE;border-radius:3px;margin-bottom:14px;overflow:hidden}
+.prog-fill{height:100%;background:var(--p);border-radius:3px;transition:width .4s cubic-bezier(.4,0,.2,1)}
 .prog-fill.full{background:var(--ok)}
-.task-row{display:flex;align-items:center;gap:12px;padding:9px 0;border-top:1px solid var(--border);cursor:pointer;-webkit-user-select:none;user-select:none}
-.task-row:active .check-box{transform:scale(.88)}
+
+/* Task rows — 44px min tap target */
+.task-row{
+  display:flex;align-items:center;gap:14px;
+  min-height:48px;padding:10px 0;
+  border-top:1px solid var(--border);
+  cursor:pointer;-webkit-user-select:none;user-select:none;
+}
+.task-row:active{opacity:.7}
 .check-box{
-  width:24px;height:24px;border-radius:7px;border:2px solid #CCC;
-  flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s;
+  width:28px;height:28px;border-radius:8px;border:2px solid #C8C8D0;
+  flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  transition:all .18s cubic-bezier(.4,0,.2,1);
 }
 .check-box.done{background:var(--p);border-color:var(--p)}
-.task-label{flex:1;font-size:15px}
+.task-label{flex:1;font-size:16px;font-weight:500;line-height:1.3}
 .task-label.done-text{text-decoration:line-through;color:var(--sub)}
-.all-done-label{text-align:center;color:var(--ok);font-weight:600;font-size:14px;margin-top:10px}
+.all-done-label{
+  text-align:center;color:var(--ok);font-weight:700;font-size:15px;
+  margin-top:12px;padding-top:12px;border-top:1px solid var(--border);
+}
 
 /* ─── Routines list ─── */
 .rl-card{
-  background:var(--card);border-radius:18px;display:flex;align-items:center;
-  box-shadow:0 2px 10px rgba(0,0,0,.06);margin-bottom:12px;overflow:hidden;
+  background:var(--card);border-radius:20px;display:flex;align-items:center;
+  box-shadow:0 2px 14px rgba(0,0,0,.07);margin-bottom:14px;overflow:hidden;
 }
-.rl-main{flex:1;display:flex;align-items:center;gap:14px;padding:15px}
-.rl-emoji{font-size:28px}
-.rl-info{flex:1}
-.rl-name{font-size:16px;font-weight:700}
-.rl-meta{font-size:13px;color:var(--sub);margin-top:2px}
-.rl-del{padding:16px 14px;background:none;border:none;cursor:pointer;display:flex;align-items:center}
-.rl-del:active{opacity:.6}
+.rl-main{
+  flex:1;display:flex;align-items:center;gap:16px;
+  padding:18px var(--gutter);min-height:72px;cursor:pointer;
+}
+.rl-emoji{font-size:32px;line-height:1}
+.rl-info{flex:1;min-width:0}
+.rl-name{font-size:17px;font-weight:700;letter-spacing:-.2px}
+.rl-meta{font-size:14px;color:var(--sub);margin-top:3px;font-weight:500}
+.rl-del{padding:18px 16px;background:none;border:none;cursor:pointer;display:flex;align-items:center;min-height:72px}
+.rl-del:active{opacity:.5}
 
 /* ─── Habits ─── */
 .hab-card{
-  background:var(--card);border-radius:18px;display:flex;align-items:center;gap:14px;
-  padding:16px;box-shadow:0 2px 10px rgba(0,0,0,.06);margin-bottom:12px;cursor:pointer;
-  transition:background .15s;-webkit-user-select:none;user-select:none;
+  background:var(--card);border-radius:20px;
+  display:flex;align-items:center;gap:16px;
+  padding:18px;min-height:76px;
+  box-shadow:0 2px 14px rgba(0,0,0,.07);margin-bottom:14px;
+  cursor:pointer;transition:background .18s,transform .15s;
+  -webkit-user-select:none;user-select:none;
 }
-.hab-card.done{background:var(--pl);border:2px solid var(--p)}
-.hab-card:active{transform:scale(.98)}
-.hab-emoji{font-size:28px;flex-shrink:0}
-.hab-info{flex:1}
-.hab-name{font-size:16px;font-weight:700}
+.hab-card.done{background:var(--pl);border:2px solid rgba(108,99,255,.35)}
+.hab-card:active{transform:scale(.975)}
+.hab-emoji{font-size:32px;flex-shrink:0;line-height:1}
+.hab-info{flex:1;min-width:0}
+.hab-name{font-size:17px;font-weight:700;letter-spacing:-.2px}
 .hab-name.done-h{color:var(--p)}
-.hab-streak{font-size:13px;color:#FF7043;margin-top:3px;font-weight:600}
-.hab-nostre{font-size:12px;color:var(--sub);margin-top:3px}
+.hab-streak{font-size:14px;color:#FF7043;margin-top:4px;font-weight:600}
+.hab-nostre{font-size:13px;color:var(--sub);margin-top:4px;font-weight:500}
 .hab-circle{
-  width:34px;height:34px;border-radius:17px;border:2px solid #CCC;
-  display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;
+  width:40px;height:40px;border-radius:20px;border:2px solid #C8C8D0;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  transition:all .18s cubic-bezier(.4,0,.2,1);
 }
 .hab-circle.done{background:var(--p);border-color:var(--p)}
 
 /* ─── Empty state ─── */
-.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 32px;gap:12px;text-align:center}
-.empty-icon{font-size:64px;opacity:.3}
-.empty-title{font-size:20px;font-weight:700;color:var(--sub)}
-.empty-sub{font-size:14px;color:#BBB;line-height:1.6}
-.empty-btn{margin-top:8px;background:var(--p);color:#fff;font-weight:700;font-size:15px;padding:14px 28px;border-radius:28px;border:none;cursor:pointer}
+.empty{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:72px 40px;gap:14px;text-align:center;
+}
+.empty-icon{font-size:72px;opacity:.25}
+.empty-title{font-size:22px;font-weight:700;color:var(--sub)}
+.empty-sub{font-size:15px;color:#BBB;line-height:1.65;font-weight:500}
+.empty-btn{
+  margin-top:10px;background:var(--p);color:#fff;font-weight:700;
+  font-size:16px;padding:16px 32px;border-radius:30px;border:none;cursor:pointer;
+  box-shadow:0 6px 18px rgba(108,99,255,.35);
+}
+.empty-btn:active{transform:scale(.95)}
 
-/* ─── Modal ─── */
+/* ─── Bottom sheet modal ─── */
 #modal-overlay{
-  position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;
-  display:none;align-items:flex-end;justify-content:center;
+  position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;
+  display:none;align-items:flex-end;
 }
 #modal-overlay.open{display:flex}
 #modal{
-  background:var(--card);border-radius:28px 28px 0 0;padding:28px 24px;
-  width:100%;padding-bottom:calc(28px + var(--safe-bot));
-  max-height:92vh;overflow-y:auto;
-  animation:slideUp .25s ease;
+  background:var(--card);
+  border-radius:28px 28px 0 0;
+  padding:8px 0 0;
+  width:100%;
+  padding-bottom:calc(24px + var(--safe-bot));
+  max-height:93vh;overflow-y:auto;
+  animation:slideUp .3s cubic-bezier(.32,0,.67,0);
+}
+/* drag handle */
+#modal::before{
+  content:'';display:block;
+  width:40px;height:4px;border-radius:2px;background:#DDD;
+  margin:8px auto 20px;
 }
 @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
-.modal-title{font-size:22px;font-weight:800;margin-bottom:20px}
-.field-row{display:flex;align-items:center;gap:12px;margin-bottom:16px}
-.emoji-pick-btn{width:52px;height:52px;border-radius:14px;background:var(--bg);border:none;font-size:28px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+
+.modal-inner{padding:0 22px}
+.modal-title{font-size:24px;font-weight:800;letter-spacing:-.4px;margin-bottom:22px}
+.field-row{display:flex;align-items:center;gap:14px;margin-bottom:20px}
+.emoji-pick-btn{
+  width:56px;height:56px;border-radius:16px;
+  background:var(--bg);border:none;font-size:30px;
+  cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+}
 input[type=text],input[type=time]{
   flex:1;border:none;border-bottom:2px solid var(--border);
-  font-size:17px;font-family:inherit;color:var(--text);padding:8px 0;background:transparent;outline:none;
+  font-size:18px;font-family:inherit;color:var(--text);
+  padding:10px 0;background:transparent;outline:none;font-weight:500;
 }
 input[type=text]:focus,input[type=time]:focus{border-bottom-color:var(--p)}
-input[type=time]{font-size:16px}
+input[type=time]{font-size:17px}
 .emoji-grid{display:flex;flex-wrap:wrap;margin-bottom:16px}
-.eg-btn{font-size:28px;padding:6px;background:none;border:none;cursor:pointer}
-.switch-row{display:flex;align-items:center;gap:10px;margin-bottom:14px}
-.switch-row label{flex:1;font-size:16px;font-weight:600}
-.tog{position:relative;width:50px;height:28px;flex-shrink:0}
+.eg-btn{font-size:30px;padding:7px;background:none;border:none;cursor:pointer}
+.switch-row{display:flex;align-items:center;gap:12px;margin-bottom:16px;min-height:44px}
+.switch-row label{flex:1;font-size:17px;font-weight:600}
+.tog{position:relative;width:52px;height:30px;flex-shrink:0}
 .tog input{opacity:0;width:0;height:0}
-.tog-slider{
-  position:absolute;inset:0;background:#CCC;border-radius:14px;cursor:pointer;transition:.3s;
-}
+.tog-slider{position:absolute;inset:0;background:#CCC;border-radius:15px;cursor:pointer;transition:.3s}
 .tog-slider::before{
-  content:'';position:absolute;width:22px;height:22px;left:3px;bottom:3px;
+  content:'';position:absolute;width:24px;height:24px;left:3px;bottom:3px;
   background:#fff;border-radius:50%;transition:.3s;
+  box-shadow:0 1px 4px rgba(0,0,0,.2);
 }
 .tog input:checked+.tog-slider{background:var(--p)}
 .tog input:checked+.tog-slider::before{transform:translateX(22px)}
-.time-wrap{margin-bottom:16px}
-.time-label{font-size:13px;color:var(--sub);margin-bottom:6px}
+.time-wrap{margin-bottom:18px}
+.time-label{font-size:14px;color:var(--sub);margin-bottom:8px;font-weight:500}
 .task-list-edit{margin-bottom:16px}
-.task-edit-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
-.task-edit-row span{flex:1;font-size:15px}
-.task-rm{background:none;border:none;font-size:20px;cursor:pointer;color:#CCC;padding:0 4px}
-.add-task-row{display:flex;align-items:center;gap:8px;margin-top:8px}
+.task-edit-row{
+  display:flex;align-items:center;gap:12px;
+  min-height:48px;padding:10px 0;border-bottom:1px solid var(--border);
+}
+.task-edit-row span{flex:1;font-size:16px;font-weight:500}
+.task-rm{
+  background:none;border:none;font-size:22px;cursor:pointer;
+  color:#CCC;padding:0 6px;min-height:44px;display:flex;align-items:center;
+}
+.add-task-row{display:flex;align-items:center;gap:10px;margin-top:10px}
 .add-task-row input{flex:1}
-.add-task-btn{width:34px;height:34px;border-radius:17px;background:var(--pl);border:none;cursor:pointer;font-size:22px;color:var(--p);display:flex;align-items:center;justify-content:center}
-.modal-btns{display:flex;gap:10px;margin-top:8px}
-.btn-cancel{flex:1;padding:15px;border-radius:16px;background:var(--bg);border:none;font-size:16px;font-weight:700;color:var(--sub);cursor:pointer}
-.btn-save{flex:1;padding:15px;border-radius:16px;background:var(--p);border:none;font-size:16px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 6px 16px rgba(108,99,255,.35)}
-.btn-cancel:active,.btn-save:active{opacity:.85}
+.add-task-btn{
+  width:38px;height:38px;border-radius:19px;
+  background:var(--pl);border:none;cursor:pointer;
+  font-size:24px;color:var(--p);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.modal-btns{display:flex;gap:12px;margin-top:20px}
+.btn-cancel{
+  flex:1;padding:17px;border-radius:18px;
+  background:var(--bg);border:none;font-size:17px;font-weight:700;
+  color:var(--sub);cursor:pointer;font-family:inherit;
+}
+.btn-save{
+  flex:1;padding:17px;border-radius:18px;
+  background:var(--p);border:none;font-size:17px;font-weight:700;
+  color:#fff;cursor:pointer;font-family:inherit;
+  box-shadow:0 6px 18px rgba(108,99,255,.38);
+}
+.btn-cancel:active{opacity:.7}
+.btn-save:active{transform:scale(.97)}
 
-/* ─── Reminder info banner ─── */
-.reminder-note{background:var(--pl);border-radius:14px;padding:12px 16px;margin:0 16px 14px;font-size:13px;color:var(--p);line-height:1.5}
+/* ─── Reminder tip banner ─── */
+.reminder-note{
+  background:var(--pl);border-radius:16px;
+  padding:14px var(--gutter);margin:0 var(--gutter) 16px;
+  font-size:14px;color:var(--p);line-height:1.55;font-weight:500;
+}
 
-/* ─── Section divider ─── */
-.section-head{font-size:18px;font-weight:700;padding:0 20px;margin:8px 0 12px}
+/* ─── Section label ─── */
+.section-head{font-size:20px;font-weight:700;padding:0 22px;margin:8px 0 14px;letter-spacing:-.3px}
+
+/* ─── Meal Planner ─── */
+.week-toggle{
+  display:flex;gap:8px;padding:12px var(--gutter) 4px;
+}
+.week-btn{
+  flex:1;padding:12px;border-radius:14px;border:none;cursor:pointer;
+  font-size:15px;font-weight:700;font-family:inherit;
+  background:var(--card);color:var(--sub);
+  box-shadow:0 2px 8px rgba(0,0,0,.06);transition:all .2s;
+}
+.week-btn.active{background:var(--p);color:#fff;box-shadow:0 4px 14px rgba(108,99,255,.35)}
+.meal-day-card{
+  background:var(--card);border-radius:20px;
+  margin-bottom:14px;overflow:hidden;
+  box-shadow:0 2px 14px rgba(0,0,0,.07);
+}
+.meal-day-card.is-today{border:2px solid var(--p)}
+.meal-day-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 18px 12px;border-bottom:1px solid var(--border);
+}
+.meal-day-name{font-size:17px;font-weight:800;letter-spacing:-.2px}
+.meal-day-date{font-size:13px;color:var(--sub);font-weight:500;margin-top:2px}
+.today-tag{
+  background:var(--p);color:#fff;font-size:11px;font-weight:700;
+  padding:3px 9px;border-radius:10px;letter-spacing:.3px;
+}
+.meal-slot{
+  display:flex;align-items:center;gap:14px;
+  padding:13px 18px;cursor:pointer;min-height:52px;
+  border-bottom:1px solid var(--border);transition:background .15s;
+}
+.meal-slot:last-child{border-bottom:none}
+.meal-slot:active{background:var(--bg)}
+.meal-slot-icon{font-size:20px;flex-shrink:0;width:26px;text-align:center}
+.meal-slot-info{flex:1;min-width:0}
+.meal-slot-label{font-size:12px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}
+.meal-slot-text{font-size:15px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.meal-slot-text.empty{color:#C0C0C8;font-style:italic}
+.meal-slot-arr{color:#D0D0D8;font-size:16px;flex-shrink:0}
+
+/* ─── Tasks tab ─── */
+.task-item{
+  background:var(--card);border-radius:18px;
+  display:flex;align-items:flex-start;gap:14px;
+  padding:16px 18px;min-height:64px;
+  box-shadow:0 2px 14px rgba(0,0,0,.07);margin-bottom:12px;
+  -webkit-user-select:none;user-select:none;
+  transition:background .15s;
+}
+.task-item:active{background:#F0F0F8}
+.task-item.done-item{opacity:.5}
+.task-item.overdue-item{border-left:3px solid var(--red)}
+.t-check{
+  width:26px;height:26px;border-radius:13px;border:2px solid #C8C8D0;
+  flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  margin-top:1px;cursor:pointer;transition:all .18s cubic-bezier(.4,0,.2,1);
+}
+.t-check.done{background:var(--ok);border-color:var(--ok)}
+.t-body{flex:1;min-width:0;cursor:pointer}
+.t-name{font-size:16px;font-weight:600;line-height:1.3}
+.t-name.done-t{text-decoration:line-through;color:var(--sub)}
+.t-meta{font-size:13px;margin-top:4px;font-weight:500;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.t-due{color:var(--sub)}
+.t-due.t-overdue{color:var(--red);font-weight:700}
+.t-due.t-today{color:var(--p);font-weight:700}
+.t-flag{background:#FFF0F0;color:var(--red);font-size:11px;font-weight:700;padding:2px 8px;border-radius:8px;letter-spacing:.3px}
+.t-del{background:none;border:none;cursor:pointer;color:#CCC;padding:2px 0 2px 8px;font-size:22px;line-height:1;display:flex;align-items:center;flex-shrink:0}
+.t-del:active{color:var(--red)}
+.tsec-head{font-size:12px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.7px;padding:0 2px;margin:14px 0 8px}
+.tsec-head.tsec-overdue{color:var(--red)}
+.tsec-head.tsec-ok{color:var(--ok)}
 </style>
 </head>
 <body>
@@ -220,6 +385,18 @@ input[type=time]{font-size:16px}
       </svg>
       <span>Habits</span>
     </div>
+    <div class="tab" data-tab="meals" onclick="switchTab('meals')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--sub)">
+        <path d="M3 11l19-9-9 19-2-8-8-2z"/>
+      </svg>
+      <span>Meals</span>
+    </div>
+    <div class="tab" data-tab="tasks" onclick="switchTab('tasks')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--sub)">
+        <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>
+      </svg>
+      <span>Tasks</span>
+    </div>
   </nav>
 </div>
 
@@ -234,18 +411,25 @@ const S = {
   routines: [],
   habits: [],
   completions: {},
+  meals: {},
+  mealWeek: 0,
+  tasks: [],
 };
 
 function loadData() {
   S.routines     = JSON.parse(localStorage.getItem('routines')     || '[]');
   S.habits       = JSON.parse(localStorage.getItem('habits')       || '[]');
   S.completions  = JSON.parse(localStorage.getItem('completions')  || '{}');
+  S.meals        = JSON.parse(localStorage.getItem('meals')        || '{}');
+  S.tasks        = JSON.parse(localStorage.getItem('tasks')        || '[]');
 }
 
 function persist() {
   localStorage.setItem('routines',    JSON.stringify(S.routines));
   localStorage.setItem('habits',      JSON.stringify(S.habits));
   localStorage.setItem('completions', JSON.stringify(S.completions));
+  localStorage.setItem('meals',       JSON.stringify(S.meals));
+  localStorage.setItem('tasks',       JSON.stringify(S.tasks));
 }
 
 function uid() {
@@ -297,6 +481,8 @@ function render() {
   if (S.tab === 'today')    screen.innerHTML = renderToday();
   if (S.tab === 'routines') screen.innerHTML = renderRoutines();
   if (S.tab === 'habits')   screen.innerHTML = renderHabits();
+  if (S.tab === 'meals')    screen.innerHTML = renderMeals();
+  if (S.tab === 'tasks')    screen.innerHTML = renderTasks();
 }
 
 // ─── Today ─────────────────────────────────────────────────────────────────────
@@ -315,15 +501,30 @@ function renderToday() {
     s + r.tasks.filter(t => comp[r.id]?.[t.id]).length, 0);
 
   let html = `<div class="today-header">
-    <div style="display:flex;align-items:flex-start;justify-content:space-between">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
       <div>
         <div class="today-greeting">${greeting}</div>
         <div class="today-date">${dateStr}</div>
       </div>
-      ${total > 0 ? `<div class="today-pill">${done}/${total} done</div>` : ''}
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        ${done > 0 ? `<button class="reset-btn" onclick="resetToday()" title="Reset all tasks">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+            <path d="M3 3v5h5"/>
+          </svg>
+        </button>` : ''}
+        ${total > 0 ? `<div class="today-pill">${done}/${total} done</div>` : ''}
+      </div>
     </div>
   </div>
   <div class="cards" style="padding-top:16px">`;
+
+  const todayTasks = S.tasks.filter(t => !t.done && t.dueDate && t.dueDate <= today);
+  if (todayTasks.length > 0) {
+    html += `<div class="tsec-head" style="margin-top:4px">🎯 Tasks due today</div>`;
+    todayTasks.forEach(t => { html += taskItemHTML(t, today); });
+    html += `<div style="height:4px"></div>`;
+  }
 
   if (S.routines.length === 0) {
     html += `<div class="empty">
@@ -373,6 +574,13 @@ function toggleTask(routineId, taskId) {
   if (!S.completions[today]) S.completions[today] = {};
   if (!S.completions[today][routineId]) S.completions[today][routineId] = {};
   S.completions[today][routineId][taskId] = !S.completions[today][routineId][taskId];
+  persist();
+  render();
+}
+
+function resetToday() {
+  if (!confirm('Reset all checkboxes for today?')) return;
+  delete S.completions[todayKey()];
   persist();
   render();
 }
@@ -512,7 +720,7 @@ function openRoutineModal(idOrNull) {
 
 function renderRoutineModal(r) {
   const modal = document.getElementById('modal');
-  modal.innerHTML = `
+  modal.innerHTML = `<div class="modal-inner">
     <div class="modal-title">${r ? 'Edit Routine' : 'New Routine'}</div>
     <div class="field-row">
       <button class="emoji-pick-btn" id="ep-btn" onclick="toggleEmojiPickerR()">${modalEmoji}</button>
@@ -530,7 +738,7 @@ function renderRoutineModal(r) {
       <div class="time-label">Remind me at</div>
       <input type="time" id="r-time" value="${r?.reminderTime ?? '08:00'}">
     </div>
-    <div class="section-head" style="padding:0;margin-bottom:10px;font-size:16px">Tasks</div>
+    <div style="font-size:17px;font-weight:700;margin-bottom:12px">Tasks</div>
     <div class="task-list-edit" id="task-list-edit">${renderTaskList()}</div>
     <div class="add-task-row">
       <input type="text" id="new-task-inp" placeholder="Add a task…" onkeydown="if(event.key==='Enter')addModalTask()">
@@ -539,7 +747,8 @@ function renderRoutineModal(r) {
     <div class="modal-btns" style="margin-top:20px">
       <button class="btn-cancel" onclick="closeModal()">Cancel</button>
       <button class="btn-save" onclick="saveRoutine()">${r ? 'Save Changes' : 'Create'}</button>
-    </div>`;
+    </div>
+  </div>`;
 }
 
 function renderTaskList() {
@@ -621,7 +830,7 @@ function openHabitModal() {
 }
 
 function renderHabitModal() {
-  document.getElementById('modal').innerHTML = `
+  document.getElementById('modal').innerHTML = `<div class="modal-inner">
     <div class="modal-title">New Habit</div>
     <div class="field-row">
       <button class="emoji-pick-btn" id="hep-btn" onclick="toggleEmojiPickerH()">${habitEmoji}</button>
@@ -630,10 +839,11 @@ function renderHabitModal() {
     <div id="hep-grid" style="display:none;flex-wrap:wrap;margin-bottom:12px">
       ${EMOJIS_H.map(e => `<button class="eg-btn" onclick="pickEmojiH('${e}')">${e}</button>`).join('')}
     </div>
-    <div class="modal-btns" style="margin-top:12px">
+    <div class="modal-btns" style="margin-top:20px">
       <button class="btn-cancel" onclick="closeModal()">Cancel</button>
       <button class="btn-save" onclick="saveHabit()">Add Habit</button>
-    </div>`;
+    </div>
+  </div>`;
   setTimeout(() => document.getElementById('h-name')?.focus(), 50);
 }
 
@@ -654,6 +864,258 @@ function saveHabit() {
   const name   = nameEl.value.trim();
   if (!name) { nameEl.focus(); return; }
   S.habits.push({ id: uid(), name, emoji: habitEmoji, completedDates: [] });
+  persist();
+  closeModal();
+  render();
+}
+
+// ─── Meal Planner ──────────────────────────────────────────────────────────────
+const MEAL_SLOTS = [
+  { key: 'breakfast', label: 'Breakfast', icon: '🌅' },
+  { key: 'lunch',     label: 'Lunch',     icon: '☀️' },
+  { key: 'dinner',    label: 'Dinner',    icon: '🌙' },
+];
+const DAY_SHORT  = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const DAY_FULL   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function getWeekDates(weekOffset) {
+  const dates = [];
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const start = new Date(today);
+  start.setDate(today.getDate() + weekOffset * 7);
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
+    dates.push(d);
+  }
+  return dates;
+}
+
+function dateKey(d) {
+  return d.toISOString().split('T')[0];
+}
+
+function renderMeals() {
+  const todayStr = todayKey();
+  const dates = getWeekDates(S.mealWeek);
+  const weekLabel = S.mealWeek === 0 ? 'This week' : 'Next week';
+
+  let html = `
+  <div class="ph">
+    <div>
+      <h1 style="font-size:32px;font-weight:800;letter-spacing:-.5px">Meal Plan</h1>
+      <div style="font-size:14px;color:var(--sub);margin-top:3px">${weekLabel} · 2-week planner</div>
+    </div>
+  </div>
+  <div class="week-toggle">
+    <button class="week-btn ${S.mealWeek===0?'active':''}" onclick="setMealWeek(0)">Week 1</button>
+    <button class="week-btn ${S.mealWeek===1?'active':''}" onclick="setMealWeek(1)">Week 2</button>
+  </div>
+  <div class="cards" style="padding-top:12px">`;
+
+  dates.forEach(d => {
+    const dk = dateKey(d);
+    const isToday = dk === todayStr;
+    const dayMeals = S.meals[dk] || {};
+
+    html += `<div class="meal-day-card ${isToday ? 'is-today' : ''}">
+      <div class="meal-day-head">
+        <div>
+          <div class="meal-day-name">${DAY_FULL[d.getDay()]}</div>
+          <div class="meal-day-date">${MONTH_SHORT[d.getMonth()]} ${d.getDate()}</div>
+        </div>
+        ${isToday ? '<span class="today-tag">TODAY</span>' : ''}
+      </div>`;
+
+    MEAL_SLOTS.forEach(slot => {
+      const val = dayMeals[slot.key] || '';
+      html += `<div class="meal-slot" onclick="openMealEdit('${dk}','${slot.key}','${slot.label}','${esc(val)}')">
+        <span class="meal-slot-icon">${slot.icon}</span>
+        <div class="meal-slot-info">
+          <div class="meal-slot-label">${slot.label}</div>
+          <div class="meal-slot-text ${val ? '' : 'empty'}">${val ? esc(val) : 'Tap to add…'}</div>
+        </div>
+        <span class="meal-slot-arr">›</span>
+      </div>`;
+    });
+
+    html += `</div>`;
+  });
+
+  html += `</div>`;
+  return html;
+}
+
+function setMealWeek(w) {
+  S.mealWeek = w;
+  render();
+}
+
+let _mealEditKey = null;
+let _mealEditSlot = null;
+
+function openMealEdit(dateKey, slotKey, slotLabel, currentVal) {
+  _mealEditKey  = dateKey;
+  _mealEditSlot = slotKey;
+
+  const d = new Date(dateKey + 'T00:00:00');
+  const dayStr = `${DAY_FULL[d.getDay()]}, ${MONTH_SHORT[d.getMonth()]} ${d.getDate()}`;
+
+  document.getElementById('modal').innerHTML = `<div class="modal-inner">
+    <div class="modal-title" style="font-size:20px">${slotLabel}</div>
+    <div style="font-size:14px;color:var(--sub);margin-bottom:20px;margin-top:-14px">${dayStr}</div>
+    <input type="text" id="meal-inp" placeholder="e.g. Avocado toast, Greek salad…"
+      value="${currentVal}" style="width:100%;font-size:18px">
+    <div class="modal-btns" style="margin-top:24px">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-save" onclick="saveMealEdit()">Save</button>
+    </div>
+  </div>`;
+  openModal();
+  setTimeout(() => {
+    const inp = document.getElementById('meal-inp');
+    inp?.focus();
+    inp?.select();
+  }, 80);
+}
+
+function saveMealEdit() {
+  const val = document.getElementById('meal-inp').value.trim();
+  if (!S.meals[_mealEditKey]) S.meals[_mealEditKey] = {};
+  if (val) {
+    S.meals[_mealEditKey][_mealEditSlot] = val;
+  } else {
+    delete S.meals[_mealEditKey][_mealEditSlot];
+  }
+  persist();
+  closeModal();
+  render();
+}
+
+// ─── Tasks ────────────────────────────────────────────────────────────────────
+function taskItemHTML(t, todayStr) {
+  const today = todayStr || todayKey();
+  const isOverdue = !t.done && t.dueDate && t.dueDate < today;
+  const isToday   = !t.done && t.dueDate === today;
+  let dueLabel = '';
+  if (t.dueDate) {
+    const d = new Date(t.dueDate + 'T00:00:00');
+    if (isOverdue) {
+      const days = Math.round((new Date(today + 'T00:00:00') - d) / 86400000);
+      dueLabel = `${days} day${days!==1?'s':''} overdue`;
+    } else if (isToday) {
+      dueLabel = 'Due today';
+    } else {
+      dueLabel = `Due ${MONTH_SHORT[d.getMonth()]} ${d.getDate()}`;
+    }
+  }
+  return `<div class="task-item ${t.done?'done-item':''} ${isOverdue?'overdue-item':''}">
+    <div class="t-check ${t.done?'done':''}" onclick="toggleTaskDone('${t.id}')">
+      ${t.done?'<svg width="13" height="13" viewBox="0 0 12 10" fill="none"><polyline points="1,5 4.5,8.5 11,1" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>':''}
+    </div>
+    <div class="t-body" onclick="toggleTaskDone('${t.id}')">
+      <div class="t-name ${t.done?'done-t':''}">${esc(t.name)}</div>
+      <div class="t-meta">
+        ${dueLabel?`<span class="t-due ${isOverdue?'t-overdue':''} ${isToday?'t-today':''}">${dueLabel}</span>`:''}
+        ${t.priority==='high'?'<span class="t-flag">HIGH</span>':''}
+      </div>
+    </div>
+    <button class="t-del" onclick="deleteTask('${t.id}','${esc(t.name)}')">×</button>
+  </div>`;
+}
+
+function renderTasks() {
+  const today = todayKey();
+  const active = S.tasks.filter(t => !t.done);
+  const done   = S.tasks.filter(t =>  t.done);
+  const overdue  = active.filter(t => t.dueDate && t.dueDate < today);
+  const dueToday = active.filter(t => t.dueDate === today);
+  const upcoming = active.filter(t => t.dueDate && t.dueDate > today);
+  const noDate   = active.filter(t => !t.dueDate);
+
+  let html = `<div class="ph">
+    <div>
+      <h1 style="font-size:30px;font-weight:800">Tasks</h1>
+      ${active.length?`<div style="font-size:14px;color:var(--sub);margin-top:2px">${active.length} remaining</div>`:''}
+    </div>
+    <button class="fab" onclick="openTaskModal()" title="Add task">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </button>
+  </div>
+  <div class="cards" style="padding-top:4px">`;
+
+  if (S.tasks.length === 0) {
+    html += `<div class="empty">
+      <div class="empty-icon">🎯</div>
+      <div class="empty-title">No tasks yet</div>
+      <div class="empty-sub">Add one-off tasks with deadlines — they'll also show up on your Today tab when due.</div>
+      <button class="empty-btn" onclick="openTaskModal()">+ Add Task</button>
+    </div>`;
+  } else {
+    const grp = (items, label, cls='') => {
+      if (!items.length) return '';
+      return `<div class="tsec-head ${cls}">${label}</div>` + items.map(t => taskItemHTML(t, today)).join('');
+    };
+    html += grp(overdue,  `⚠️ Overdue (${overdue.length})`, 'tsec-overdue');
+    html += grp(dueToday, '📌 Due Today');
+    html += grp(upcoming, '📅 Upcoming');
+    html += grp(noDate,   '· No Date');
+    html += grp(done,     `✓ Done (${done.length})`, 'tsec-ok');
+  }
+
+  html += `</div>`;
+  return html;
+}
+
+function toggleTaskDone(id) {
+  S.tasks = S.tasks.map(t => t.id === id ? {...t, done: !t.done} : t);
+  persist();
+  render();
+}
+
+function deleteTask(id, name) {
+  if (!confirm(`Delete "${name}"?`)) return;
+  S.tasks = S.tasks.filter(t => t.id !== id);
+  persist();
+  render();
+}
+
+let _taskPriority = 'normal';
+
+function openTaskModal() {
+  _taskPriority = 'normal';
+  renderTaskModal();
+  openModal();
+}
+
+function renderTaskModal() {
+  document.getElementById('modal').innerHTML = `<div class="modal-inner">
+    <div class="modal-title">New Task</div>
+    <div class="field-row" style="margin-bottom:20px">
+      <input type="text" id="task-name-inp" placeholder="Task name…" style="flex:1" onkeydown="if(event.key==='Enter')saveTask()">
+    </div>
+    <div class="time-label">Due date (optional)</div>
+    <input type="date" id="task-due-inp" style="width:100%;font-size:17px;font-family:inherit;border:none;border-bottom:2px solid var(--border);padding:10px 0;background:transparent;outline:none;color:var(--text);margin-bottom:20px">
+    <div class="switch-row" style="margin-bottom:20px">
+      <span style="font-size:17px;font-weight:600">High priority</span>
+      <label class="tog"><input type="checkbox" id="task-pri-tog" onchange="_taskPriority=this.checked?'high':'normal'"><span class="tog-slider"></span></label>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-save" onclick="saveTask()">Add Task</button>
+    </div>
+  </div>`;
+  setTimeout(() => document.getElementById('task-name-inp')?.focus(), 50);
+}
+
+function saveTask() {
+  const nameEl = document.getElementById('task-name-inp');
+  const name = nameEl.value.trim();
+  if (!name) { nameEl.focus(); return; }
+  const dueDate = document.getElementById('task-due-inp').value || null;
+  S.tasks.push({ id: uid(), name, dueDate, priority: _taskPriority, done: false });
   persist();
   closeModal();
   render();
