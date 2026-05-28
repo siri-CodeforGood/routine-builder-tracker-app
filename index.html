@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="My Routines">
+<meta name="theme-color" content="#6C63FF">
+<link rel="manifest" href="manifest.json">
+<title>My Routines</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --p:#6C63FF;--pl:#EEF0FF;--bg:#F5F5FA;--card:#fff;
+  --text:#1A1A2E;--sub:#888;--ok:#4CAF50;--red:#FF5252;
+  --border:#EFEFEF;
+  --safe-top:env(safe-area-inset-top,20px);
+  --safe-bot:env(safe-area-inset-bottom,0px);
+}
+html,body{height:100%;overflow:hidden;background:var(--bg)}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:var(--text);display:flex;flex-direction:column}
+
+/* ─── Layout ─── */
+#app{flex:1;display:flex;flex-direction:column;overflow:hidden}
+#screen{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(72px + var(--safe-bot))}
+.page{padding:0 0 24px}
+
+/* ─── Tab bar ─── */
+#tabbar{
+  position:fixed;bottom:0;left:0;right:0;
+  background:rgba(255,255,255,0.92);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  border-top:1px solid var(--border);
+  display:flex;
+  padding-bottom:var(--safe-bot);
+  z-index:100;
+}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 0 8px;cursor:pointer;gap:3px}
+.tab svg{width:24px;height:24px;transition:transform .15s}
+.tab span{font-size:10px;font-weight:600;color:var(--sub)}
+.tab.active svg{transform:scale(1.1)}
+.tab.active span{color:var(--p)}
+
+/* ─── Page header ─── */
+.ph{
+  padding:calc(var(--safe-top) + 16px) 20px 12px;
+  display:flex;align-items:flex-end;justify-content:space-between;
+  position:sticky;top:0;
+  background:var(--bg);
+  z-index:10;
+}
+.ph h1{font-size:30px;font-weight:800}
+.ph-right{display:flex;align-items:center;gap:10px}
+.fab{
+  width:42px;height:42px;border-radius:21px;
+  background:var(--p);border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 6px 16px rgba(108,99,255,.35);
+  transition:transform .12s;flex-shrink:0;
+}
+.fab:active{transform:scale(.92)}
+.fab svg{width:20px;height:20px}
+
+/* ─── Card ─── */
+.card{
+  background:var(--card);border-radius:20px;padding:18px;
+  box-shadow:0 2px 12px rgba(0,0,0,.06);margin-bottom:14px;
+}
+.cards{padding:0 16px}
+
+/* ─── Today ─── */
+.today-header{padding:calc(var(--safe-top)+16px) 20px 4px}
+.today-greeting{font-size:26px;font-weight:800}
+.today-date{font-size:14px;color:var(--sub);margin-top:2px}
+.today-pill{background:var(--p);color:#fff;font-weight:700;font-size:13px;padding:5px 12px;border-radius:20px;white-space:nowrap}
+
+.routine-card{background:var(--card);border-radius:20px;padding:18px;box-shadow:0 2px 12px rgba(0,0,0,.06);margin-bottom:14px}
+.routine-card.all-done{border:2px solid var(--ok)}
+.rc-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.rc-emoji{font-size:28px;flex-shrink:0}
+.rc-meta{flex:1}
+.rc-name{font-size:17px;font-weight:700}
+.rc-time{font-size:12px;color:var(--sub);margin-top:2px}
+.rc-count{font-size:13px;font-weight:700;color:var(--p);white-space:nowrap}
+.rc-count.done-count{color:var(--ok)}
+.prog-bar{height:5px;background:#EEE;border-radius:3px;margin-bottom:14px;overflow:hidden}
+.prog-fill{height:100%;background:var(--p);border-radius:3px;transition:width .3s}
+.prog-fill.full{background:var(--ok)}
+.task-row{display:flex;align-items:center;gap:12px;padding:9px 0;border-top:1px solid var(--border);cursor:pointer;-webkit-user-select:none;user-select:none}
+.task-row:active .check-box{transform:scale(.88)}
+.check-box{
+  width:24px;height:24px;border-radius:7px;border:2px solid #CCC;
+  flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s;
+}
+.check-box.done{background:var(--p);border-color:var(--p)}
+.task-label{flex:1;font-size:15px}
+.task-label.done-text{text-decoration:line-through;color:var(--sub)}
+.all-done-label{text-align:center;color:var(--ok);font-weight:600;font-size:14px;margin-top:10px}
+
+/* ─── Routines list ─── */
+.rl-card{
+  background:var(--card);border-radius:18px;display:flex;align-items:center;
+  box-shadow:0 2px 10px rgba(0,0,0,.06);margin-bottom:12px;overflow:hidden;
+}
+.rl-main{flex:1;display:flex;align-items:center;gap:14px;padding:15px}
+.rl-emoji{font-size:28px}
+.rl-info{flex:1}
+.rl-name{font-size:16px;font-weight:700}
+.rl-meta{font-size:13px;color:var(--sub);margin-top:2px}
+.rl-del{padding:16px 14px;background:none;border:none;cursor:pointer;display:flex;align-items:center}
+.rl-del:active{opacity:.6}
+
+/* ─── Habits ─── */
+.hab-card{
+  background:var(--card);border-radius:18px;display:flex;align-items:center;gap:14px;
+  padding:16px;box-shadow:0 2px 10px rgba(0,0,0,.06);margin-bottom:12px;cursor:pointer;
+  transition:background .15s;-webkit-user-select:none;user-select:none;
+}
+.hab-card.done{background:var(--pl);border:2px solid var(--p)}
+.hab-card:active{transform:scale(.98)}
+.hab-emoji{font-size:28px;flex-shrink:0}
+.hab-info{flex:1}
+.hab-name{font-size:16px;font-weight:700}
+.hab-name.done-h{color:var(--p)}
+.hab-streak{font-size:13px;color:#FF7043;margin-top:3px;font-weight:600}
+.hab-nostre{font-size:12px;color:var(--sub);margin-top:3px}
+.hab-circle{
+  width:34px;height:34px;border-radius:17px;border:2px solid #CCC;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;
+}
+.hab-circle.done{background:var(--p);border-color:var(--p)}
+
+/* ─── Empty state ─── */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 32px;gap:12px;text-align:center}
+.empty-icon{font-size:64px;opacity:.3}
+.empty-title{font-size:20px;font-weight:700;color:var(--sub)}
+.empty-sub{font-size:14px;color:#BBB;line-height:1.6}
+.empty-btn{margin-top:8px;background:var(--p);color:#fff;font-weight:700;font-size:15px;padding:14px 28px;border-radius:28px;border:none;cursor:pointer}
+
+/* ─── Modal ─── */
+#modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;
+  display:none;align-items:flex-end;justify-content:center;
+}
+#modal-overlay.open{display:flex}
+#modal{
+  background:var(--card);border-radius:28px 28px 0 0;padding:28px 24px;
+  width:100%;padding-bottom:calc(28px + var(--safe-bot));
+  max-height:92vh;overflow-y:auto;
+  animation:slideUp .25s ease;
+}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal-title{font-size:22px;font-weight:800;margin-bottom:20px}
+.field-row{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.emoji-pick-btn{width:52px;height:52px;border-radius:14px;background:var(--bg);border:none;font-size:28px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+input[type=text],input[type=time]{
+  flex:1;border:none;border-bottom:2px solid var(--border);
+  font-size:17px;font-family:inherit;color:var(--text);padding:8px 0;background:transparent;outline:none;
+}
+input[type=text]:focus,input[type=time]:focus{border-bottom-color:var(--p)}
+input[type=time]{font-size:16px}
+.emoji-grid{display:flex;flex-wrap:wrap;margin-bottom:16px}
+.eg-btn{font-size:28px;padding:6px;background:none;border:none;cursor:pointer}
+.switch-row{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.switch-row label{flex:1;font-size:16px;font-weight:600}
+.tog{position:relative;width:50px;height:28px;flex-shrink:0}
+.tog input{opacity:0;width:0;height:0}
+.tog-slider{
+  position:absolute;inset:0;background:#CCC;border-radius:14px;cursor:pointer;transition:.3s;
+}
+.tog-slider::before{
+  content:'';position:absolute;width:22px;height:22px;left:3px;bottom:3px;
+  background:#fff;border-radius:50%;transition:.3s;
+}
+.tog input:checked+.tog-slider{background:var(--p)}
+.tog input:checked+.tog-slider::before{transform:translateX(22px)}
+.time-wrap{margin-bottom:16px}
+.time-label{font-size:13px;color:var(--sub);margin-bottom:6px}
+.task-list-edit{margin-bottom:16px}
+.task-edit-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.task-edit-row span{flex:1;font-size:15px}
+.task-rm{background:none;border:none;font-size:20px;cursor:pointer;color:#CCC;padding:0 4px}
+.add-task-row{display:flex;align-items:center;gap:8px;margin-top:8px}
+.add-task-row input{flex:1}
+.add-task-btn{width:34px;height:34px;border-radius:17px;background:var(--pl);border:none;cursor:pointer;font-size:22px;color:var(--p);display:flex;align-items:center;justify-content:center}
+.modal-btns{display:flex;gap:10px;margin-top:8px}
+.btn-cancel{flex:1;padding:15px;border-radius:16px;background:var(--bg);border:none;font-size:16px;font-weight:700;color:var(--sub);cursor:pointer}
+.btn-save{flex:1;padding:15px;border-radius:16px;background:var(--p);border:none;font-size:16px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 6px 16px rgba(108,99,255,.35)}
+.btn-cancel:active,.btn-save:active{opacity:.85}
+
+/* ─── Reminder info banner ─── */
+.reminder-note{background:var(--pl);border-radius:14px;padding:12px 16px;margin:0 16px 14px;font-size:13px;color:var(--p);line-height:1.5}
+
+/* ─── Section divider ─── */
+.section-head{font-size:18px;font-weight:700;padding:0 20px;margin:8px 0 12px}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="screen"></div>
+  <nav id="tabbar">
+    <div class="tab active" data-tab="today" onclick="switchTab('today')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--p)">
+        <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+      </svg>
+      <span style="color:var(--p)">Today</span>
+    </div>
+    <div class="tab" data-tab="routines" onclick="switchTab('routines')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--sub)">
+        <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+        <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+      </svg>
+      <span>Routines</span>
+    </div>
+    <div class="tab" data-tab="habits" onclick="switchTab('habits')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--sub)">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+      </svg>
+      <span>Habits</span>
+    </div>
+  </nav>
+</div>
+
+<div id="modal-overlay" onclick="closeModal(event)">
+  <div id="modal"></div>
+</div>
+
+<script>
+// ─── State & Storage ───────────────────────────────────────────────────────────
+const S = {
+  tab: 'today',
+  routines: [],
+  habits: [],
+  completions: {},
+};
+
+function loadData() {
+  S.routines     = JSON.parse(localStorage.getItem('routines')     || '[]');
+  S.habits       = JSON.parse(localStorage.getItem('habits')       || '[]');
+  S.completions  = JSON.parse(localStorage.getItem('completions')  || '{}');
+}
+
+function persist() {
+  localStorage.setItem('routines',    JSON.stringify(S.routines));
+  localStorage.setItem('habits',      JSON.stringify(S.habits));
+  localStorage.setItem('completions', JSON.stringify(S.completions));
+}
+
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
+
+function todayKey() {
+  return new Date().toISOString().split('T')[0];
+}
+
+// ─── Streak ────────────────────────────────────────────────────────────────────
+function calcStreak(dates) {
+  if (!dates.length) return 0;
+  const today = todayKey();
+  let streak = 0;
+  const d = new Date();
+  for (let i = 0; i < 365; i++) {
+    const k = d.toISOString().split('T')[0];
+    if (dates.includes(k)) {
+      streak++;
+    } else if (i === 0) {
+      // didn't do today yet — check yesterday
+    } else {
+      break;
+    }
+    d.setDate(d.getDate() - 1);
+  }
+  return streak;
+}
+
+// ─── Tab switching ─────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  S.tab = tab;
+  document.querySelectorAll('.tab').forEach(el => {
+    const active = el.dataset.tab === tab;
+    el.classList.toggle('active', active);
+    const svg  = el.querySelector('svg');
+    const span = el.querySelector('span');
+    svg.style.color  = active ? 'var(--p)' : 'var(--sub)';
+    span.style.color = active ? 'var(--p)' : 'var(--sub)';
+  });
+  render();
+}
+
+// ─── Render ────────────────────────────────────────────────────────────────────
+function render() {
+  const screen = document.getElementById('screen');
+  screen.scrollTop = 0;
+  if (S.tab === 'today')    screen.innerHTML = renderToday();
+  if (S.tab === 'routines') screen.innerHTML = renderRoutines();
+  if (S.tab === 'habits')   screen.innerHTML = renderHabits();
+}
+
+// ─── Today ─────────────────────────────────────────────────────────────────────
+function renderToday() {
+  const days   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const now    = new Date();
+  const h      = now.getHours();
+  const greeting = h < 12 ? 'Good morning 👋' : h < 17 ? 'Good afternoon 👋' : 'Good evening 👋';
+  const dateStr  = `${days[now.getDay()]}, ${months[now.getMonth()]} ${now.getDate()}`;
+
+  const today = todayKey();
+  const comp  = S.completions[today] || {};
+  const total = S.routines.reduce((s, r) => s + r.tasks.length, 0);
+  const done  = S.routines.reduce((s, r) =>
+    s + r.tasks.filter(t => comp[r.id]?.[t.id]).length, 0);
+
+  let html = `<div class="today-header">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between">
+      <div>
+        <div class="today-greeting">${greeting}</div>
+        <div class="today-date">${dateStr}</div>
+      </div>
+      ${total > 0 ? `<div class="today-pill">${done}/${total} done</div>` : ''}
+    </div>
+  </div>
+  <div class="cards" style="padding-top:16px">`;
+
+  if (S.routines.length === 0) {
+    html += `<div class="empty">
+      <div class="empty-icon">📅</div>
+      <div class="empty-title">Nothing planned yet</div>
+      <div class="empty-sub">Go to the Routines tab to create your first daily routine.</div>
+    </div>`;
+  } else {
+    S.routines.forEach(r => {
+      const rdone = r.tasks.filter(t => comp[r.id]?.[t.id]).length;
+      const rtotal = r.tasks.length;
+      const pct = rtotal ? rdone / rtotal : 0;
+      const allDone = rtotal > 0 && rdone === rtotal;
+
+      html += `<div class="routine-card ${allDone ? 'all-done' : ''}">
+        <div class="rc-head">
+          <span class="rc-emoji">${r.emoji}</span>
+          <div class="rc-meta">
+            <div class="rc-name">${esc(r.name)}</div>
+            ${r.reminderTime ? `<div class="rc-time">⏰ ${r.reminderTime}</div>` : ''}
+          </div>
+          <span class="rc-count ${allDone ? 'done-count' : ''}">${rdone}/${rtotal}</span>
+        </div>
+        <div class="prog-bar"><div class="prog-fill ${allDone ? 'full' : ''}" style="width:${pct*100}%"></div></div>`;
+
+      r.tasks.forEach(t => {
+        const isDone = !!comp[r.id]?.[t.id];
+        html += `<div class="task-row" onclick="toggleTask('${r.id}','${t.id}')">
+          <div class="check-box ${isDone ? 'done' : ''}">
+            ${isDone ? '<svg width="13" height="13" viewBox="0 0 12 10" fill="none"><polyline points="1,5 4.5,8.5 11,1" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>' : ''}
+          </div>
+          <span class="task-label ${isDone ? 'done-text' : ''}">${esc(t.name)}</span>
+        </div>`;
+      });
+
+      if (allDone) html += `<div class="all-done-label">✅ All done!</div>`;
+      html += `</div>`;
+    });
+  }
+
+  html += `</div>`;
+  return html;
+}
+
+function toggleTask(routineId, taskId) {
+  const today = todayKey();
+  if (!S.completions[today]) S.completions[today] = {};
+  if (!S.completions[today][routineId]) S.completions[today][routineId] = {};
+  S.completions[today][routineId][taskId] = !S.completions[today][routineId][taskId];
+  persist();
+  render();
+}
+
+// ─── Routines ──────────────────────────────────────────────────────────────────
+function renderRoutines() {
+  let html = `<div class="ph">
+    <h1 style="font-size:30px;font-weight:800">Routines</h1>
+    <button class="fab" onclick="openRoutineModal(null)" title="Add routine">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </button>
+  </div>
+  <div class="reminder-note">
+    💡 Set a reminder time on each routine. Add it to iOS Reminders or use a Shortcut to get a daily ping.
+  </div>
+  <div class="cards">`;
+
+  if (S.routines.length === 0) {
+    html += `<div class="empty">
+      <div class="empty-icon">📋</div>
+      <div class="empty-title">No routines yet</div>
+      <div class="empty-sub">Create a routine with tasks and an optional reminder time.</div>
+      <button class="empty-btn" onclick="openRoutineModal(null)">+ Create Routine</button>
+    </div>`;
+  } else {
+    S.routines.forEach(r => {
+      html += `<div class="rl-card">
+        <div class="rl-main" onclick="openRoutineModal('${r.id}')">
+          <span class="rl-emoji">${r.emoji}</span>
+          <div class="rl-info">
+            <div class="rl-name">${esc(r.name)}</div>
+            <div class="rl-meta">${r.tasks.length} task${r.tasks.length!==1?'s':''}${r.reminderTime ? ' · ⏰ '+r.reminderTime : ''}</div>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#CCC" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+        <button class="rl-del" onclick="deleteRoutine('${r.id}','${esc(r.name)}')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        </button>
+      </div>`;
+    });
+  }
+
+  html += `</div>`;
+  return html;
+}
+
+function deleteRoutine(id, name) {
+  if (!confirm(`Delete "${name}"?`)) return;
+  S.routines = S.routines.filter(r => r.id !== id);
+  persist();
+  render();
+}
+
+// ─── Habits ────────────────────────────────────────────────────────────────────
+function renderHabits() {
+  const today = todayKey();
+  const doneCount = S.habits.filter(h => h.completedDates.includes(today)).length;
+
+  let html = `<div class="ph">
+    <div>
+      <h1 style="font-size:30px;font-weight:800">Habits</h1>
+      ${S.habits.length ? `<div style="font-size:14px;color:var(--sub);margin-top:2px">${doneCount}/${S.habits.length} done today</div>` : ''}
+    </div>
+    <button class="fab" onclick="openHabitModal()" title="Add habit">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </button>
+  </div>
+  <div class="cards">`;
+
+  if (S.habits.length === 0) {
+    html += `<div class="empty">
+      <div class="empty-icon">✅</div>
+      <div class="empty-title">No habits yet</div>
+      <div class="empty-sub">Track daily habits and build streaks. Long-press to delete.</div>
+      <button class="empty-btn" onclick="openHabitModal()">+ Add Habit</button>
+    </div>`;
+  } else {
+    S.habits.forEach(h => {
+      const done   = h.completedDates.includes(today);
+      const streak = calcStreak(h.completedDates);
+      html += `<div class="hab-card ${done ? 'done' : ''}" onclick="toggleHabit('${h.id}')" oncontextmenu="deleteHabit(event,'${h.id}','${esc(h.name)}')">
+        <span class="hab-emoji">${h.emoji}</span>
+        <div class="hab-info">
+          <div class="hab-name ${done ? 'done-h' : ''}">${esc(h.name)}</div>
+          ${streak > 0
+            ? `<div class="hab-streak">🔥 ${streak} day${streak!==1?'s':''} streak</div>`
+            : `<div class="hab-nostre">Start your streak today</div>`}
+        </div>
+        <div class="hab-circle ${done ? 'done' : ''}">
+          ${done ? '<svg width="16" height="16" viewBox="0 0 12 10" fill="none"><polyline points="1,5 4.5,8.5 11,1" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>' : ''}
+        </div>
+      </div>`;
+    });
+  }
+
+  html += `</div>`;
+  return html;
+}
+
+function toggleHabit(id) {
+  const today = todayKey();
+  S.habits = S.habits.map(h => {
+    if (h.id !== id) return h;
+    const done = h.completedDates.includes(today);
+    return { ...h, completedDates: done ? h.completedDates.filter(d => d !== today) : [...h.completedDates, today] };
+  });
+  persist();
+  render();
+}
+
+function deleteHabit(e, id, name) {
+  e.preventDefault();
+  if (!confirm(`Delete habit "${name}"?`)) return;
+  S.habits = S.habits.filter(h => h.id !== id);
+  persist();
+  render();
+}
+
+// ─── Routine Modal ─────────────────────────────────────────────────────────────
+const EMOJIS_R = ['🌅','🌙','💪','🧘','📚','🍳','🏃','🎯','✨','🌿','🏋️','🎵','📝','🧹','💊','☕','🚿','🛌','🧴','🧠','🔋','🌊'];
+const EMOJIS_H = ['💧','🏃','🧘','📚','😴','🥗','💊','🧹','✍️','🎵','🏋️','🌿','🧴','📵','🙏','☕','🥤','🚶','❤️','🧘'];
+
+let modalTasks = [];
+let modalEmoji = '🌅';
+let showEmojiPicker = false;
+let editingRoutineId = null;
+
+function openRoutineModal(idOrNull) {
+  const r = idOrNull ? S.routines.find(x => x.id === idOrNull) : null;
+  editingRoutineId = idOrNull;
+  modalTasks = r ? [...r.tasks.map(t => ({ ...t }))] : [];
+  modalEmoji = r?.emoji ?? '🌅';
+  showEmojiPicker = false;
+  renderRoutineModal(r);
+  openModal();
+}
+
+function renderRoutineModal(r) {
+  const modal = document.getElementById('modal');
+  modal.innerHTML = `
+    <div class="modal-title">${r ? 'Edit Routine' : 'New Routine'}</div>
+    <div class="field-row">
+      <button class="emoji-pick-btn" id="ep-btn" onclick="toggleEmojiPickerR()">${modalEmoji}</button>
+      <input type="text" id="r-name" placeholder="Routine name…" value="${r ? esc(r.name) : ''}">
+    </div>
+    <div id="ep-grid" style="display:${showEmojiPicker?'flex':'none'};flex-wrap:wrap;margin-bottom:12px">
+      ${EMOJIS_R.map(e => `<button class="eg-btn" onclick="pickEmojiR('${e}')">${e}</button>`).join('')}
+    </div>
+    <div class="switch-row">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--p)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <label for="r-rem">Reminder time</label>
+      <label class="tog"><input type="checkbox" id="r-rem-tog" ${r?.reminderTime?'checked':''} onchange="toggleReminder()"><span class="tog-slider"></span></label>
+    </div>
+    <div class="time-wrap" id="time-wrap" style="display:${r?.reminderTime?'block':'none'}">
+      <div class="time-label">Remind me at</div>
+      <input type="time" id="r-time" value="${r?.reminderTime ?? '08:00'}">
+    </div>
+    <div class="section-head" style="padding:0;margin-bottom:10px;font-size:16px">Tasks</div>
+    <div class="task-list-edit" id="task-list-edit">${renderTaskList()}</div>
+    <div class="add-task-row">
+      <input type="text" id="new-task-inp" placeholder="Add a task…" onkeydown="if(event.key==='Enter')addModalTask()">
+      <button class="add-task-btn" onclick="addModalTask()">+</button>
+    </div>
+    <div class="modal-btns" style="margin-top:20px">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-save" onclick="saveRoutine()">${r ? 'Save Changes' : 'Create'}</button>
+    </div>`;
+}
+
+function renderTaskList() {
+  if (!modalTasks.length) return '<div style="color:#BBB;font-size:14px;padding:4px 0">No tasks yet.</div>';
+  return modalTasks.map((t, i) =>
+    `<div class="task-edit-row">
+      <span>${esc(t.name)}</span>
+      <button class="task-rm" onclick="removeModalTask(${i})">×</button>
+    </div>`
+  ).join('');
+}
+
+function toggleEmojiPickerR() {
+  showEmojiPicker = !showEmojiPicker;
+  document.getElementById('ep-grid').style.display = showEmojiPicker ? 'flex' : 'none';
+}
+
+function pickEmojiR(e) {
+  modalEmoji = e;
+  document.getElementById('ep-btn').textContent = e;
+  showEmojiPicker = false;
+  document.getElementById('ep-grid').style.display = 'none';
+}
+
+function toggleReminder() {
+  const on = document.getElementById('r-rem-tog').checked;
+  document.getElementById('time-wrap').style.display = on ? 'block' : 'none';
+}
+
+function addModalTask() {
+  const inp = document.getElementById('new-task-inp');
+  const name = inp.value.trim();
+  if (!name) return;
+  modalTasks.push({ id: uid(), name });
+  inp.value = '';
+  document.getElementById('task-list-edit').innerHTML = renderTaskList();
+}
+
+function removeModalTask(i) {
+  modalTasks.splice(i, 1);
+  document.getElementById('task-list-edit').innerHTML = renderTaskList();
+}
+
+function saveRoutine() {
+  const nameEl = document.getElementById('r-name');
+  const name   = nameEl.value.trim();
+  if (!name) { nameEl.focus(); return; }
+  const remOn  = document.getElementById('r-rem-tog').checked;
+  const remTime = remOn ? document.getElementById('r-time').value : null;
+
+  const routine = {
+    id: editingRoutineId ?? uid(),
+    name,
+    emoji: modalEmoji,
+    tasks: [...modalTasks],
+    reminderTime: remTime,
+  };
+
+  if (editingRoutineId) {
+    S.routines = S.routines.map(r => r.id === editingRoutineId ? routine : r);
+  } else {
+    S.routines.push(routine);
+  }
+
+  persist();
+  closeModal();
+  render();
+}
+
+// ─── Habit Modal ───────────────────────────────────────────────────────────────
+let habitEmoji = '💧';
+let habitEmojiOpen = false;
+
+function openHabitModal() {
+  habitEmoji = '💧';
+  habitEmojiOpen = false;
+  renderHabitModal();
+  openModal();
+}
+
+function renderHabitModal() {
+  document.getElementById('modal').innerHTML = `
+    <div class="modal-title">New Habit</div>
+    <div class="field-row">
+      <button class="emoji-pick-btn" id="hep-btn" onclick="toggleEmojiPickerH()">${habitEmoji}</button>
+      <input type="text" id="h-name" placeholder="e.g. Drink 8 glasses of water…" onkeydown="if(event.key==='Enter')saveHabit()">
+    </div>
+    <div id="hep-grid" style="display:none;flex-wrap:wrap;margin-bottom:12px">
+      ${EMOJIS_H.map(e => `<button class="eg-btn" onclick="pickEmojiH('${e}')">${e}</button>`).join('')}
+    </div>
+    <div class="modal-btns" style="margin-top:12px">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-save" onclick="saveHabit()">Add Habit</button>
+    </div>`;
+  setTimeout(() => document.getElementById('h-name')?.focus(), 50);
+}
+
+function toggleEmojiPickerH() {
+  habitEmojiOpen = !habitEmojiOpen;
+  document.getElementById('hep-grid').style.display = habitEmojiOpen ? 'flex' : 'none';
+}
+
+function pickEmojiH(e) {
+  habitEmoji = e;
+  document.getElementById('hep-btn').textContent = e;
+  habitEmojiOpen = false;
+  document.getElementById('hep-grid').style.display = 'none';
+}
+
+function saveHabit() {
+  const nameEl = document.getElementById('h-name');
+  const name   = nameEl.value.trim();
+  if (!name) { nameEl.focus(); return; }
+  S.habits.push({ id: uid(), name, emoji: habitEmoji, completedDates: [] });
+  persist();
+  closeModal();
+  render();
+}
+
+// ─── Modal helpers ─────────────────────────────────────────────────────────────
+function openModal() {
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function closeModal(e) {
+  if (e && e.target !== document.getElementById('modal-overlay')) return;
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+
+// ─── Escape HTML ───────────────────────────────────────────────────────────────
+function esc(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─── Service Worker ────────────────────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+// ─── Boot ──────────────────────────────────────────────────────────────────────
+loadData();
+render();
+</script>
+</body>
+</html>
