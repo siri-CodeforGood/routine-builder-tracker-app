@@ -8,6 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="My Routines">
 <meta name="theme-color" content="#6C63FF">
 <link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" id="ati">
 <title>My Routines</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -677,6 +678,28 @@ function esc(str) {
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
+
+// ─── Apple touch icon (generated, no image file needed) ───────────────────────
+(function() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 180;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#6C63FF';
+  ctx.beginPath();
+  const r = 36;
+  ctx.moveTo(r, 0); ctx.lineTo(180-r, 0);
+  ctx.arcTo(180,0,180,r,r); ctx.lineTo(180,180-r);
+  ctx.arcTo(180,180,180-r,180,r); ctx.lineTo(r,180);
+  ctx.arcTo(0,180,0,180-r,r); ctx.lineTo(0,r);
+  ctx.arcTo(0,0,r,0,r); ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 96px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('R', 90, 95);
+  document.getElementById('ati').href = c.toDataURL('image/png');
+})();
 
 // ─── Boot ──────────────────────────────────────────────────────────────────────
 loadData();

@@ -1,5 +1,9 @@
 const CACHE = 'routines-v1';
-const ASSETS = ['/', '/index.html', '/manifest.json'];
+const ASSETS = [
+  '/routine-builder-tracker-app/',
+  '/routine-builder-tracker-app/index.html',
+  '/routine-builder-tracker-app/manifest.json',
+];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
