@@ -224,6 +224,18 @@ body{
 }
 @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
 
+/* ─── Daily quote card ─── */
+.quote-card{
+  background:linear-gradient(135deg,#EEEEFF 0%,#F5F0FF 100%);
+  border-radius:20px;padding:18px 20px 16px;margin-bottom:16px;position:relative;overflow:hidden;
+}
+.quote-card::before{
+  content:'\201C';font-size:72px;line-height:1;color:var(--p);opacity:.15;
+  position:absolute;top:-4px;left:10px;font-family:Georgia,serif;
+}
+.quote-text{font-size:14px;font-style:italic;line-height:1.65;color:var(--text);padding-left:4px;margin-bottom:10px}
+.quote-author{font-size:12px;font-weight:700;color:var(--p);text-align:right}
+
 /* ─── Toast notification ─── */
 #toast{
   position:fixed;
@@ -546,6 +558,80 @@ function render() {
   if (S.tab === 'tasks')    screen.innerHTML = renderTasks();
 }
 
+// ─── Daily Quotes ──────────────────────────────────────────────────────────────
+const QUOTES = [
+  { q: "You don't have to be extreme, just consistent.", a: "Anonymous" },
+  { q: "Take care of your body. It's the only place you have to live.", a: "Jim Rohn" },
+  { q: "Rest when you're weary. Refresh and renew yourself, your body, your mind, your spirit.", a: "Ralph Marston" },
+  { q: "Healing is not linear. Be patient with yourself.", a: "Anonymous" },
+  { q: "Small steps every day add up to big changes over time.", a: "Anonymous" },
+  { q: "Your body hears everything your mind says. Stay positive.", a: "Naomi Judd" },
+  { q: "Self-care is not self-indulgence. It is self-preservation.", a: "Audre Lorde" },
+  { q: "Strength doesn't come from what you can do. It comes from overcoming the things you once thought you couldn't.", a: "Rikki Rogers" },
+  { q: "You are braver than you believe, stronger than you seem, and smarter than you think.", a: "A.A. Milne" },
+  { q: "The groundwork of all happiness is good health.", a: "Leigh Hunt" },
+  { q: "An early morning walk is a blessing for the whole day.", a: "Henry David Thoreau" },
+  { q: "To keep the body in good health is a duty, otherwise we shall not be able to keep our mind strong and clear.", a: "Buddha" },
+  { q: "She stood in the storm, and when the wind did not blow her away, she adjusted her sails.", a: "Elizabeth Edwards" },
+  { q: "Progress, not perfection.", a: "Anonymous" },
+  { q: "You have been assigned this mountain so that you can show others it can be moved.", a: "Anonymous" },
+  { q: "Nourishing yourself in a way that helps you blossom in the direction you want to go is attainable.", a: "Deborah Day" },
+  { q: "Every day is a second chance.", a: "Anonymous" },
+  { q: "The secret of getting ahead is getting started.", a: "Mark Twain" },
+  { q: "Believe you can and you're halfway there.", a: "Theodore Roosevelt" },
+  { q: "You do not have to be perfect to be amazing.", a: "Anonymous" },
+  { q: "In the middle of difficulty lies opportunity.", a: "Albert Einstein" },
+  { q: "Your body is capable of incredible things. Trust the process.", a: "Anonymous" },
+  { q: "Sleep is the best meditation.", a: "Dalai Lama" },
+  { q: "The food you eat can be either the safest and most powerful form of medicine or the slowest form of poison.", a: "Ann Wigmore" },
+  { q: "Let food be thy medicine and medicine be thy food.", a: "Hippocrates" },
+  { q: "You are enough. You have enough. You do enough.", a: "Anonymous" },
+  { q: "What you eat in private, you wear in public. Nourish yourself well.", a: "Anonymous" },
+  { q: "A healthy outside starts from the inside.", a: "Robert Urich" },
+  { q: "Fall seven times, stand up eight.", a: "Japanese Proverb" },
+  { q: "Difficult roads often lead to beautiful destinations.", a: "Zig Ziglar" },
+  { q: "You are stronger than your diagnosis.", a: "Anonymous" },
+  { q: "The best project you'll ever work on is you.", a: "Anonymous" },
+  { q: "Breathe. You are doing the best you can.", a: "Anonymous" },
+  { q: "Your calm mind is the ultimate weapon against your challenges.", a: "Bryant McGill" },
+  { q: "Almost everything will work again if you unplug it for a few minutes, including you.", a: "Anne Lamott" },
+  { q: "It's not about having time. It's about making time.", a: "Anonymous" },
+  { q: "Wellness is a journey, not a destination.", a: "Anonymous" },
+  { q: "Be gentle with yourself. You are a child of the universe.", a: "Max Ehrmann" },
+  { q: "The greatest wealth is health.", a: "Virgil" },
+  { q: "Start where you are. Use what you have. Do what you can.", a: "Arthur Ashe" },
+  { q: "You don't have to outrun your yesterday. Just outlast it.", a: "Anonymous" },
+  { q: "One good thing about music, when it hits you, you feel no pain.", a: "Bob Marley" },
+  { q: "To enjoy the glow of good health, you must exercise.", a: "Gene Tunney" },
+  { q: "A little progress each day adds up to big results.", a: "Satya Nani" },
+  { q: "Be the change you wish to see in the world.", a: "Mahatma Gandhi" },
+  { q: "Your limitations are only in your mind.", a: "Anonymous" },
+  { q: "Happiness is the highest form of health.", a: "Dalai Lama" },
+  { q: "The only way out is through.", a: "Robert Frost" },
+  { q: "Every morning is a chance at a new day.", a: "Anonymous" },
+  { q: "Don't watch the clock; do what it does — keep going.", a: "Sam Levenson" },
+  { q: "Act as if what you do makes a difference. It does.", a: "William James" },
+  { q: "Vitality shows not only in the ability to persist but in the ability to start over.", a: "F. Scott Fitzgerald" },
+  { q: "You can't pour from an empty cup. Take care of yourself first.", a: "Anonymous" },
+  { q: "Chronic illness is a marathon, not a sprint. Pace yourself with grace.", a: "Anonymous" },
+  { q: "Your body is doing its best every single day.", a: "Anonymous" },
+  { q: "Consistency is more important than intensity.", a: "Anonymous" },
+  { q: "Healing takes courage, and we all have courage, even if we have to dig for it.", a: "Tori Amos" },
+  { q: "Magic is believing in yourself. If you can do that, anything is possible.", a: "Johann Wolfgang von Goethe" },
+  { q: "The human body is the best work of art.", a: "Jess C. Scott" },
+  { q: "Each new day is a blank page in the diary of your life.", a: "Douglas Pagels" },
+  { q: "You are more powerful than you know.", a: "Anonymous" },
+  { q: "Good things come to those who sweat.", a: "Anonymous" },
+  { q: "Movement is medicine.", a: "Anonymous" },
+];
+
+function getDailyQuote() {
+  const now   = new Date();
+  const start = new Date(now.getFullYear(), 0, 0);
+  const day   = Math.floor((now - start) / 86400000);
+  return QUOTES[day % QUOTES.length];
+}
+
 // ─── Today ─────────────────────────────────────────────────────────────────────
 function renderToday() {
   const days   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
@@ -584,6 +670,12 @@ function renderToday() {
     </div>
   </div>
   <div class="cards" style="padding-top:16px">`;
+
+  const q = getDailyQuote();
+  html += `<div class="quote-card">
+    <div class="quote-text">${q.q}</div>
+    <div class="quote-author">— ${q.a}</div>
+  </div>`;
 
   const todayTasks = S.tasks.filter(t => !t.done && t.dueDate && t.dueDate <= today);
   if (todayTasks.length > 0) {
