@@ -1815,12 +1815,12 @@ function saveTask() {
 // ─── Mind / AI Chat ────────────────────────────────────────────────────────────
 let _chatBusy = false;
 
-const SAGE_SYSTEM_PROMPT = `You are Sage, a compassionate wellness AI companion inside a personal health app called "My Routines." The user lives with Hashimoto's thyroiditis and Vitamin D deficiency, which means they may experience fatigue, brain fog, mood changes, weight fluctuations, hair loss, and cold sensitivity.
+const SAGE_SYSTEM_PROMPT = `You are Sage, a compassionate wellness AI companion inside a personal health app called "My Routines." You support people in building healthy daily habits, routines, and a positive mindset.
 
 Your role:
 • Offer warm emotional support and active listening
-• Provide evidence-based wellness guidance relevant to Hashimoto's and thyroid health
-• Help the user reflect on energy levels, mood, symptoms, and daily routines
+• Provide practical, evidence-based wellness guidance on topics like sleep, nutrition, movement, stress, and mental health
+• Help the user reflect on their energy levels, mood, and daily routines
 • Celebrate their wins — big and small — with genuine warmth
 • Encourage without toxic positivity; hard days are valid and real
 
@@ -1828,9 +1828,8 @@ Key guidelines:
 • Keep responses warm, concise, and conversational — aim for 2-4 short paragraphs
 • Use plain text; avoid excessive markdown formatting in chat
 • Never diagnose or prescribe; always suggest consulting their doctor for medical decisions
-• You may discuss: levothyroxine timing (empty stomach, wait 30-60 min before eating/other meds), selenium 200mcg, magnesium glycinate, Vitamin D3+K2, and Omega-3 in the context of Hashimoto's support
-• Gentle movement (yoga, walking) and an anti-inflammatory gluten-free diet are worth encouraging
-• Sleep is especially important for thyroid hormone regulation — be supportive of bedtime routines
+• You can discuss general wellness topics: sleep hygiene, hydration, gentle movement (yoga, walking), stress management, mindfulness, anti-inflammatory eating, and healthy supplements in general contexts
+• When the user mentions specific health conditions or symptoms, be supportive and encourage them to speak with their healthcare provider
 • When the user seems stressed or anxious, offer a simple breathing or grounding exercise`;
 
 function mdToHtml(text) {
@@ -1886,7 +1885,7 @@ function renderMind() {
     <div class="mind-setup">
       <div class="mind-setup-icon">✨</div>
       <div class="mind-setup-title">Meet Sage</div>
-      <div class="mind-setup-sub">Your personal AI wellness companion — here to support your Hashimoto's journey with empathy and evidence-based guidance.</div>
+      <div class="mind-setup-sub">Your personal AI wellness companion — here to support your health journey with empathy, encouragement, and evidence-based guidance.</div>
       <div style="width:100%;text-align:left">
         <div style="font-size:13px;font-weight:700;color:var(--sub);margin-bottom:8px">Google Gemini API Key</div>
         <input class="mind-key-input" type="password" id="gemini-key-inp"
@@ -1911,7 +1910,7 @@ function renderMind() {
     // Welcome message
     msgsHtml = `<div class="chat-bubble-wrap ai">
       <div class="chat-avatar">✨</div>
-      <div><div class="chat-bubble ai">Hi there 💜 I'm Sage, your wellness companion.<br><br>I'm here to support your Hashimoto's journey — whether you want to talk about how you're feeling today, ask about your routines, supplements, or just need a kind ear.<br><br>How are you doing right now?</div></div>
+      <div><div class="chat-bubble ai">Hi there 💜 I'm Sage, your wellness companion.<br><br>I'm here for you — whether you want to talk about how you're feeling today, get tips on your routines, reflect on your habits, or just need a kind ear.<br><br>How are you doing right now?</div></div>
     </div>`;
   } else {
     msgsHtml = msgs.map(m => m.role === 'user'
