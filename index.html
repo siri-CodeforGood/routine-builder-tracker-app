@@ -214,6 +214,20 @@ body{
 }
 @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
 
+/* ─── Toast notification ─── */
+#toast{
+  position:fixed;
+  bottom:calc(var(--tab-h) + var(--safe-bot) + 16px);
+  left:50%;transform:translateX(-50%) translateY(24px);
+  background:rgba(26,26,46,.93);color:#fff;
+  padding:13px 22px;border-radius:18px;
+  font-size:14px;font-weight:600;line-height:1.4;
+  max-width:88vw;text-align:center;
+  opacity:0;transition:opacity .28s ease,transform .28s cubic-bezier(.4,0,.2,1);
+  pointer-events:none;z-index:9999;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
 .modal-inner{padding:0 22px}
 .modal-title{font-size:24px;font-weight:800;letter-spacing:-.4px;margin-bottom:22px}
 .field-row{display:flex;align-items:center;gap:14px;margin-bottom:20px}
@@ -361,6 +375,11 @@ input[type=time]{font-size:17px}
 .tsec-head{font-size:12px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.7px;padding:0 2px;margin:14px 0 8px}
 .tsec-head.tsec-overdue{color:var(--red)}
 .tsec-head.tsec-ok{color:var(--ok)}
+
+/* ─── Report ─── */
+.rpt-sec{font-size:12px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px}
+.rpt-pill{padding:8px 18px;border-radius:20px;border:none;cursor:pointer;font-family:inherit;font-size:14px;font-weight:700;white-space:nowrap;background:var(--bg);color:var(--sub);transition:all .2s;flex-shrink:0}
+.rpt-pill.active{background:var(--p);color:#fff;box-shadow:0 4px 12px rgba(108,99,255,.3)}
 </style>
 </head>
 <body>
@@ -404,6 +423,7 @@ input[type=time]{font-size:17px}
 <div id="modal-overlay" onclick="closeModal(event)">
   <div id="modal"></div>
 </div>
+<div id="toast"></div>
 
 <script>
 // ─── State & Storage ───────────────────────────────────────────────────────────
@@ -415,6 +435,7 @@ const S = {
   meals: {},
   mealWeek: 0,
   tasks: [],
+  notifHabitTime: '20:00',
 };
 
 function loadData() {
@@ -422,7 +443,14 @@ function loadData() {
   S.habits       = JSON.parse(localStorage.getItem('habits')       || '[]');
   S.completions  = JSON.parse(localStorage.getItem('completions')  || '{}');
   S.meals        = JSON.parse(localStorage.getItem('meals')        || '{}');
-  S.tasks        = JSON.parse(localStorage.getItem('tasks')        || '[]');
+  S.tasks           = JSON.parse(localStorage.getItem('tasks')           || '[]');
+  S.notifHabitTime  = localStorage.getItem('notifHabitTime')              || '20:00';
+  // migrate old single-string meal values → arrays
+  Object.values(S.meals).forEach(day => {
+    ['breakfast','lunch','dinner'].forEach(slot => {
+      if (typeof day[slot] === 'string') day[slot] = [day[slot]];
+    });
+  });
 }
 
 function persist() {
@@ -430,7 +458,8 @@ function persist() {
   localStorage.setItem('habits',      JSON.stringify(S.habits));
   localStorage.setItem('completions', JSON.stringify(S.completions));
   localStorage.setItem('meals',       JSON.stringify(S.meals));
-  localStorage.setItem('tasks',       JSON.stringify(S.tasks));
+  localStorage.setItem('tasks',          JSON.stringify(S.tasks));
+  localStorage.setItem('notifHabitTime', S.notifHabitTime);
 }
 
 function uid() {
@@ -926,16 +955,28 @@ function dateKey(d) {
   return d.toISOString().split('T')[0];
 }
 
+// Which week of the 2-week cycle is "this week" (1 or 2)
+function mealCycleWeek() {
+  return Math.floor(Date.now() / (7 * 86400000)) % 2 === 0 ? 1 : 2;
+}
+// Today's day-of-week index: 0=Mon … 6=Sun
+function todayDow() {
+  return (new Date().getDay() + 6) % 7;
+}
+
+const MEAL_DAY_NAMES = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+
 function renderMeals() {
-  const todayStr = todayKey();
-  const dates = getWeekDates(S.mealWeek);
-  const weekLabel = S.mealWeek === 0 ? 'This week' : 'Next week';
+  const cycleWeek  = mealCycleWeek();
+  const todDow     = todayDow();
+  const weekNum    = S.mealWeek + 1; // 1 or 2
+  const isThisWeek = weekNum === cycleWeek;
 
   let html = `
   <div class="ph">
     <div>
       <h1 style="font-size:32px;font-weight:800;letter-spacing:-.5px">Meal Plan</h1>
-      <div style="font-size:14px;color:var(--sub);margin-top:3px">${weekLabel} · 2-week planner</div>
+      <div style="font-size:14px;color:var(--sub);margin-top:3px">2-week repeating template</div>
     </div>
   </div>
   <div class="week-toggle">
@@ -944,34 +985,36 @@ function renderMeals() {
   </div>
   <div class="cards" style="padding-top:12px">`;
 
-  dates.forEach(d => {
-    const dk = dateKey(d);
-    const isToday = dk === todayStr;
-    const dayMeals = S.meals[dk] || {};
+  for (let dow = 0; dow < 7; dow++) {
+    const key      = `w${weekNum}-${dow}`;
+    const isToday  = isThisWeek && dow === todDow;
+    const dayMeals = S.meals[key] || {};
 
     html += `<div class="meal-day-card ${isToday ? 'is-today' : ''}">
       <div class="meal-day-head">
-        <div>
-          <div class="meal-day-name">${DAY_FULL[d.getDay()]}</div>
-          <div class="meal-day-date">${MONTH_SHORT[d.getMonth()]} ${d.getDate()}</div>
-        </div>
+        <div><div class="meal-day-name">${MEAL_DAY_NAMES[dow]}</div></div>
         ${isToday ? '<span class="today-tag">TODAY</span>' : ''}
       </div>`;
 
     MEAL_SLOTS.forEach(slot => {
-      const val = dayMeals[slot.key] || '';
-      html += `<div class="meal-slot" onclick="openMealEdit('${dk}','${slot.key}','${slot.label}','${esc(val)}')">
+      const raw   = dayMeals[slot.key];
+      const items = Array.isArray(raw) ? raw : (raw ? [raw] : []);
+      const isEmpty = items.length === 0;
+      const preview = items.length > 1
+        ? `${esc(items[0])} <span style="color:var(--sub);font-size:13px">+${items.length-1} more</span>`
+        : (isEmpty ? '' : esc(items[0]));
+      html += `<div class="meal-slot" onclick="openMealEdit('${key}','${slot.key}','${slot.label}')">
         <span class="meal-slot-icon">${slot.icon}</span>
         <div class="meal-slot-info">
           <div class="meal-slot-label">${slot.label}</div>
-          <div class="meal-slot-text ${val ? '' : 'empty'}">${val ? esc(val) : 'Tap to add…'}</div>
+          <div class="meal-slot-text ${isEmpty ? 'empty' : ''}">${isEmpty ? 'Tap to add…' : preview}</div>
         </div>
         <span class="meal-slot-arr">›</span>
       </div>`;
     });
 
     html += `</div>`;
-  });
+  }
 
   html += `</div>`;
   return html;
@@ -984,43 +1027,365 @@ function setMealWeek(w) {
 
 let _mealEditKey = null;
 let _mealEditSlot = null;
+let _mealItems = [];
 
-function openMealEdit(dateKey, slotKey, slotLabel, currentVal) {
+function openMealEdit(dateKey, slotKey, slotLabel) {
   _mealEditKey  = dateKey;
   _mealEditSlot = slotKey;
+  const raw = (S.meals[dateKey] || {})[slotKey];
+  _mealItems = Array.isArray(raw) ? [...raw] : (raw ? [raw] : []);
 
-  const d = new Date(dateKey + 'T00:00:00');
-  const dayStr = `${DAY_FULL[d.getDay()]}, ${MONTH_SHORT[d.getMonth()]} ${d.getDate()}`;
+  // dateKey is template-format e.g. "w1-3" → Week 1, Thursday
+  const [wPart, dowStr] = dateKey.split('-');
+  const weekNum = wPart.replace('w', '');
+  const dayStr = `Week ${weekNum} – ${MEAL_DAY_NAMES[parseInt(dowStr, 10)]}`;
 
   document.getElementById('modal').innerHTML = `<div class="modal-inner">
     <div class="modal-title" style="font-size:20px">${slotLabel}</div>
-    <div style="font-size:14px;color:var(--sub);margin-bottom:20px;margin-top:-14px">${dayStr}</div>
-    <input type="text" id="meal-inp" placeholder="e.g. Avocado toast, Greek salad…"
-      value="${currentVal}" style="width:100%;font-size:18px">
-    <div class="modal-btns" style="margin-top:24px">
+    <div style="font-size:14px;color:var(--sub);margin-bottom:16px;margin-top:-14px">${dayStr}</div>
+    <div class="task-list-edit" id="meal-item-list">${renderMealItemList()}</div>
+    <div class="add-task-row" style="margin-top:10px">
+      <input type="text" id="meal-inp" placeholder="Add item…" onkeydown="if(event.key==='Enter')addMealItem()">
+      <button class="add-task-btn" onclick="addMealItem()">+</button>
+    </div>
+    <div class="modal-btns" style="margin-top:20px">
       <button class="btn-cancel" onclick="closeModal()">Cancel</button>
-      <button class="btn-save" onclick="saveMealEdit()">Save</button>
+      <button class="btn-save" onclick="saveMealEdit()">Done</button>
     </div>
   </div>`;
   openModal();
-  setTimeout(() => {
-    const inp = document.getElementById('meal-inp');
-    inp?.focus();
-    inp?.select();
-  }, 80);
+  setTimeout(() => document.getElementById('meal-inp')?.focus(), 50);
+}
+
+function renderMealItemList() {
+  if (!_mealItems.length) return '<div style="color:#BBB;font-size:14px;padding:6px 0">No items yet — add one below.</div>';
+  return _mealItems.map((item, i) =>
+    `<div class="task-edit-row">
+      <span>${esc(item)}</span>
+      <button class="task-rm" onclick="removeMealItem(${i})">×</button>
+    </div>`
+  ).join('');
+}
+
+function addMealItem() {
+  const inp = document.getElementById('meal-inp');
+  const val = inp.value.trim();
+  if (!val) return;
+  _mealItems.push(val);
+  inp.value = '';
+  document.getElementById('meal-item-list').innerHTML = renderMealItemList();
+  inp.focus();
+}
+
+function removeMealItem(i) {
+  _mealItems.splice(i, 1);
+  document.getElementById('meal-item-list').innerHTML = renderMealItemList();
 }
 
 function saveMealEdit() {
-  const val = document.getElementById('meal-inp').value.trim();
   if (!S.meals[_mealEditKey]) S.meals[_mealEditKey] = {};
-  if (val) {
-    S.meals[_mealEditKey][_mealEditSlot] = val;
-  } else {
-    delete S.meals[_mealEditKey][_mealEditSlot];
-  }
+  if (_mealItems.length > 0) S.meals[_mealEditKey][_mealEditSlot] = [..._mealItems];
+  else delete S.meals[_mealEditKey][_mealEditSlot];
   persist();
   closeModal();
   render();
+}
+
+// ─── Reports ──────────────────────────────────────────────────────────────────
+let _rptPeriod = 'week';
+
+const RPT_PERIODS = [
+  { id:'week',  label:'Week'  },
+  { id:'month', label:'Month' },
+  { id:'3m',    label:'3M'   },
+  { id:'6m',    label:'6M'   },
+  { id:'9m',    label:'9M'   },
+  { id:'year',  label:'Year'  },
+];
+
+function openReportModal() {
+  _rptPeriod = 'week';
+  document.getElementById('modal').innerHTML = `<div class="modal-inner">
+    <div class="modal-title">Reports</div>
+    <div style="display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:6px;margin-bottom:18px;scrollbar-width:none">
+      ${RPT_PERIODS.map(p =>
+        `<button id="rpt-btn-${p.id}" class="rpt-pill${p.id==='week'?' active':''}" onclick="switchRptPeriod('${p.id}')">${p.label}</button>`
+      ).join('')}
+    </div>
+    <div id="rpt-content">${buildRpt('week')}</div>
+  </div>`;
+  openModal();
+}
+
+function switchRptPeriod(p) {
+  _rptPeriod = p;
+  RPT_PERIODS.forEach(x => {
+    const b = document.getElementById('rpt-btn-'+x.id);
+    if (b) b.className = 'rpt-pill' + (x.id===p ? ' active' : '');
+  });
+  document.getElementById('rpt-content').innerHTML = buildRpt(p);
+}
+
+// ── helpers ──
+function rptDays(n) {
+  const out = [];
+  for (let i = n-1; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate()-i);
+    out.push(d.toISOString().split('T')[0]);
+  }
+  return out;
+}
+
+function rptMonths(n) {
+  const out = [];
+  for (let i = n-1; i >= 0; i--) {
+    const d = new Date(); d.setDate(1); d.setMonth(d.getMonth()-i);
+    out.push({ y: d.getFullYear(), m: d.getMonth(), label: MONTH_SHORT[d.getMonth()] });
+  }
+  return out;
+}
+
+function daysInMonth(y, m) {
+  return new Date(y, m+1, 0).getDate();
+}
+
+function monthDayKeys(y, m) {
+  const keys = [];
+  for (let d = 1; d <= daysInMonth(y, m); d++)
+    keys.push(`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`);
+  return keys;
+}
+
+function colorPct(pct) {
+  return pct >= 70 ? 'var(--ok)' : pct >= 40 ? 'var(--p)' : 'var(--sub)';
+}
+
+function barChart(values, labels, color, maxH=48) {
+  const mx = Math.max(...values, 1);
+  return `
+    <div style="display:flex;gap:4px;align-items:flex-end;height:${maxH}px;margin-bottom:3px">
+      ${values.map(v => {
+        const h = Math.max(Math.round(v/mx*maxH), v>0?3:0);
+        return `<div style="flex:1;background:${color};border-radius:3px 3px 0 0;height:${h}px;opacity:.85"></div>`;
+      }).join('')}
+    </div>
+    <div style="display:flex;gap:4px;margin-bottom:14px">
+      ${labels.map(l => `<div style="flex:1;text-align:center;font-size:9px;color:var(--sub);font-weight:600;overflow:hidden">${l}</div>`).join('')}
+    </div>`;
+}
+
+function habitProgressRow(h, pct) {
+  return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+    <span style="font-size:16px;width:22px;flex-shrink:0">${h.emoji}</span>
+    <div style="flex:1;min-width:0">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+        <span style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:70%">${esc(h.name)}</span>
+        <span style="font-size:13px;font-weight:700;color:${colorPct(pct)}">${pct}%</span>
+      </div>
+      <div style="height:6px;background:#E8E8EE;border-radius:3px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${colorPct(pct)};border-radius:3px"></div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function tasksBlock(label='Tasks') {
+  const today = todayKey();
+  const done    = S.tasks.filter(t => t.done).length;
+  const pending = S.tasks.filter(t => !t.done).length;
+  const overdue = S.tasks.filter(t => !t.done && t.dueDate && t.dueDate < today).length;
+  const high    = S.tasks.filter(t => !t.done && t.priority==='high').length;
+  return `<div class="rpt-sec" style="margin-top:20px">${label}</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <div style="background:var(--bg);border-radius:16px;padding:16px;text-align:center">
+      <div style="font-size:32px;font-weight:800;color:var(--ok);line-height:1">${done}</div>
+      <div style="font-size:12px;color:var(--sub);margin-top:6px;font-weight:600">Completed</div>
+    </div>
+    <div style="background:var(--bg);border-radius:16px;padding:16px;text-align:center">
+      <div style="font-size:32px;font-weight:800;color:${overdue>0?'var(--red)':'var(--text)'};line-height:1">${pending}</div>
+      <div style="font-size:12px;color:var(--sub);margin-top:6px;font-weight:600">Pending${overdue>0?`<br><span style="color:var(--red)">${overdue} overdue</span>`:''}</div>
+    </div>
+    ${high>0?`<div style="background:#FFF0F0;border-radius:16px;padding:12px 16px;text-align:center;grid-column:1/-1">
+      <div style="font-size:13px;font-weight:700;color:var(--red)">⚑ ${high} high-priority pending</div>
+    </div>`:''}
+  </div>`;
+}
+
+function streakBlock() {
+  if (!S.habits.length) return '';
+  const best = [...S.habits].sort((a,b) => calcStreak(b.completedDates)-calcStreak(a.completedDates))[0];
+  const s = calcStreak(best.completedDates);
+  if (!s) return '';
+  return `<div style="background:var(--pl);border-radius:16px;padding:16px;text-align:center;margin-top:10px">
+    <div style="font-size:26px">${best.emoji}</div>
+    <div style="font-size:13px;font-weight:700;color:var(--p);margin-top:6px">🔥 ${s}-day streak</div>
+    <div style="font-size:12px;color:var(--sub);margin-top:2px">${esc(best.name)}</div>
+  </div>`;
+}
+
+// ── WEEK ──
+function buildRptWeek() {
+  const days = rptDays(7);
+  const labels = days.map(dk => DAY_SHORT[new Date(dk+'T00:00:00').getDay()]);
+  let html = '';
+
+  if (S.habits.length) {
+    html += `<div class="rpt-sec">Habits — Last 7 Days</div>
+    <div style="display:flex;gap:4px;padding-left:32px;margin-bottom:5px">
+      ${labels.map(l=>`<div style="flex:1;text-align:center;font-size:10px;color:var(--sub);font-weight:600">${l}</div>`).join('')}
+    </div>`;
+    S.habits.forEach(h => {
+      const dots = days.map(dk => h.completedDates.includes(dk));
+      const count = dots.filter(Boolean).length;
+      html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <span style="font-size:17px;width:24px;flex-shrink:0">${h.emoji}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:600;color:var(--sub);margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(h.name)}</div>
+          <div style="display:flex;gap:4px">
+            ${dots.map(d=>`<div style="flex:1;height:20px;border-radius:5px;background:${d?'var(--ok)':'#E8E8EE'}"></div>`).join('')}
+          </div>
+        </div>
+        <div style="font-size:13px;font-weight:700;color:${colorPct(Math.round(count/7*100))};min-width:28px;text-align:right">${count}/7</div>
+      </div>`;
+    });
+  }
+
+  if (S.routines.length && S.routines.some(r=>r.tasks.length)) {
+    const stats = days.map(dk => {
+      const comp = S.completions[dk]||{};
+      const total = S.routines.reduce((s,r)=>s+r.tasks.length,0);
+      const done  = S.routines.reduce((s,r)=>s+r.tasks.filter(t=>comp[r.id]?.[t.id]).length,0);
+      return {done,total};
+    });
+    const wTotal = stats.reduce((s,d)=>s+d.total,0);
+    const wDone  = stats.reduce((s,d)=>s+d.done, 0);
+    const pct    = wTotal ? Math.round(wDone/wTotal*100) : 0;
+    html += `<div class="rpt-sec" style="margin-top:20px">Routines — This Week</div>
+    <div style="background:var(--bg);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:16px;margin-bottom:12px">
+      <div style="font-size:38px;font-weight:800;color:${colorPct(pct)};line-height:1">${pct}%</div>
+      <div><div style="font-size:15px;font-weight:700">Task completion</div>
+        <div style="font-size:13px;color:var(--sub);margin-top:3px">${wDone} of ${wTotal} tasks</div></div>
+    </div>
+    ${barChart(stats.map(d=>d.total?d.done/d.total:0), labels, 'var(--p)')}`;
+  }
+
+  html += tasksBlock('Tasks') + streakBlock() + `<div style="height:8px"></div>`;
+  return html;
+}
+
+// ── MONTH ──
+function buildRptMonth() {
+  const days = rptDays(30);
+  let html = '';
+
+  if (S.habits.length) {
+    html += `<div class="rpt-sec">Habits — Last 30 Days</div>`;
+    S.habits.forEach(h => {
+      const done = days.filter(dk => h.completedDates.includes(dk)).length;
+      const pct  = Math.round(done/30*100);
+      html += `<div style="margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-bottom:6px">
+          ${days.map(dk => `<div style="width:calc((100% - ${29*4}px)/30);height:14px;border-radius:3px;min-width:7px;background:${h.completedDates.includes(dk)?'var(--ok)':'#E8E8EE'}"></div>`).join('')}
+        </div>
+        ${habitProgressRow(h, pct)}
+      </div>`;
+    });
+  }
+
+  if (S.routines.length && S.routines.some(r=>r.tasks.length)) {
+    // Group into 4-5 weeks
+    const weeks = [[],[],[],[]];
+    days.forEach((dk,i) => weeks[Math.floor(i/7)%4].push(dk));
+    const wStats = weeks.map(wk => {
+      let done=0, total=0;
+      wk.forEach(dk => {
+        const comp = S.completions[dk]||{};
+        S.routines.forEach(r => {
+          total += r.tasks.length;
+          done  += r.tasks.filter(t=>comp[r.id]?.[t.id]).length;
+        });
+      });
+      return {done, total, pct: total?Math.round(done/total*100):0};
+    });
+    const mTotal = wStats.reduce((s,w)=>s+w.total,0);
+    const mDone  = wStats.reduce((s,w)=>s+w.done, 0);
+    const pct    = mTotal ? Math.round(mDone/mTotal*100) : 0;
+    html += `<div class="rpt-sec" style="margin-top:20px">Routines — This Month</div>
+    <div style="background:var(--bg);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:16px;margin-bottom:12px">
+      <div style="font-size:38px;font-weight:800;color:${colorPct(pct)};line-height:1">${pct}%</div>
+      <div><div style="font-size:15px;font-weight:700">Task completion</div>
+        <div style="font-size:13px;color:var(--sub);margin-top:3px">${mDone} of ${mTotal} tasks</div></div>
+    </div>
+    ${barChart(wStats.map(w=>w.pct), ['Wk 1','Wk 2','Wk 3','Wk 4'], 'var(--p)')}`;
+  }
+
+  html += tasksBlock('Tasks') + streakBlock() + `<div style="height:8px"></div>`;
+  return html;
+}
+
+// ── N-MONTH (shared for 3M / 6M / 9M / Year) ──
+function buildRptMonthly(n) {
+  const months = rptMonths(n);
+  const label  = n === 12 ? 'This Year' : `Last ${n} Months`;
+  let html = '';
+
+  if (S.habits.length) {
+    const monthAvg = months.map(({y,m}) => {
+      const keys = monthDayKeys(y,m);
+      const avg  = S.habits.reduce((s,h) => {
+        const done = keys.filter(dk=>h.completedDates.includes(dk)).length;
+        return s + Math.round(done/keys.length*100);
+      }, 0) / S.habits.length;
+      return Math.round(avg);
+    });
+
+    html += `<div class="rpt-sec">Habits — ${label}</div>
+    ${barChart(monthAvg, months.map(m=>m.label), 'var(--ok)')}`;
+
+    // Per-habit %
+    html += S.habits.map(h => {
+      const allKeys = months.flatMap(({y,m})=>monthDayKeys(y,m));
+      const done    = allKeys.filter(dk=>h.completedDates.includes(dk)).length;
+      return habitProgressRow(h, Math.round(done/allKeys.length*100));
+    }).join('') + `<div style="height:4px"></div>`;
+  }
+
+  if (S.routines.length && S.routines.some(r=>r.tasks.length)) {
+    const mStats = months.map(({y,m}) => {
+      let done=0, total=0;
+      monthDayKeys(y,m).forEach(dk => {
+        const comp = S.completions[dk]||{};
+        S.routines.forEach(r => {
+          total += r.tasks.length;
+          done  += r.tasks.filter(t=>comp[r.id]?.[t.id]).length;
+        });
+      });
+      return {done, total, pct: total?Math.round(done/total*100):0};
+    });
+    const yTotal = mStats.reduce((s,m)=>s+m.total,0);
+    const yDone  = mStats.reduce((s,m)=>s+m.done, 0);
+    const pct    = yTotal ? Math.round(yDone/yTotal*100) : 0;
+    html += `<div class="rpt-sec" style="margin-top:4px">Routines — ${label}</div>
+    <div style="background:var(--bg);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:16px;margin-bottom:12px">
+      <div style="font-size:38px;font-weight:800;color:${colorPct(pct)};line-height:1">${pct}%</div>
+      <div><div style="font-size:15px;font-weight:700">Task completion</div>
+        <div style="font-size:13px;color:var(--sub);margin-top:3px">${yDone} of ${yTotal} tasks</div></div>
+    </div>
+    ${barChart(mStats.map(m=>m.pct), months.map(m=>m.label), 'var(--p)')}`;
+  }
+
+  html += tasksBlock('Tasks — All Time') + streakBlock() + `<div style="height:8px"></div>`;
+  return html;
+}
+
+function buildRpt(period) {
+  if (period === 'week')  return buildRptWeek();
+  if (period === 'month') return buildRptMonth();
+  if (period === '3m')    return buildRptMonthly(3);
+  if (period === '6m')    return buildRptMonthly(6);
+  if (period === '9m')    return buildRptMonthly(9);
+  if (period === 'year')  return buildRptMonthly(12);
+  return buildRptWeek();
 }
 
 // ─── Tasks ────────────────────────────────────────────────────────────────────
@@ -1150,6 +1515,115 @@ function saveTask() {
   render();
 }
 
+// ─── Notifications ─────────────────────────────────────────────────────────────
+let _notifInterval = null;
+
+function initNotifications() {
+  checkTasksOnOpen();          // immediate on-open task check (toast only)
+  checkNotifications();        // immediate check in case we opened exactly at reminder time
+  clearInterval(_notifInterval);
+  _notifInterval = setInterval(checkNotifications, 60000); // every minute
+}
+
+function checkNotifications() {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+
+  const now  = new Date();
+  const hhmm = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  const today = todayKey();
+
+  // Load + clean old fired keys (only keep today's)
+  let fired = {};
+  try { fired = JSON.parse(localStorage.getItem('notifFired') || '{}'); } catch(e) {}
+  Object.keys(fired).forEach(k => { if (!k.endsWith(today)) delete fired[k]; });
+
+  // 1. Routine reminders
+  S.routines.forEach(r => {
+    if (!r.reminderTime) return;
+    const key = `r-${r.id}-${today}`;
+    if (fired[key]) return;
+    if (r.reminderTime === hhmm) {
+      const title = `${r.emoji || '⏰'} ${r.name}`;
+      fireNotif(title, 'Time to start your routine!', key);
+      fired[key] = 1;
+    }
+  });
+
+  // 2. Habit reminder (fires if habits unfinished at the set time)
+  const habitKey = `habits-${today}`;
+  if (!fired[habitKey] && hhmm === (S.notifHabitTime || '20:00')) {
+    const undone = S.habits.filter(h => !h.completedDates.includes(today));
+    if (undone.length > 0) {
+      const preview = undone.slice(0,2).map(h => h.name).join(', ')
+                    + (undone.length > 2 ? ` +${undone.length-2} more` : '');
+      fireNotif('🌟 Habit Check-in',
+        `${undone.length} habit${undone.length>1?'s':''} left: ${preview}`, habitKey);
+      fired[habitKey] = 1;
+    }
+  }
+
+  // 3. Task alert at 9 am
+  const taskKey = `tasks-${today}`;
+  if (!fired[taskKey] && hhmm === '09:00') {
+    const due = S.tasks.filter(t => !t.done && t.dueDate && t.dueDate <= today);
+    if (due.length > 0) {
+      fireNotif('🎯 Tasks Due Today',
+        `${due.length} task${due.length>1?'s':''} need your attention`, taskKey);
+      fired[taskKey] = 1;
+    }
+  }
+
+  localStorage.setItem('notifFired', JSON.stringify(fired));
+}
+
+function checkTasksOnOpen() {
+  const today  = todayKey();
+  const overdue  = S.tasks.filter(t => !t.done && t.dueDate && t.dueDate <  today).length;
+  const dueToday = S.tasks.filter(t => !t.done && t.dueDate && t.dueDate === today).length;
+  if (overdue + dueToday === 0) return;
+  const msg = overdue > 0
+    ? `🎯 ${overdue} overdue · ${dueToday} due today`
+    : `🎯 ${dueToday} task${dueToday>1?'s':''} due today`;
+  showToast(msg, 4500);
+}
+
+function fireNotif(title, body, tag) {
+  try {
+    new Notification(title, {
+      body, tag,
+      icon: '/routine-builder-tracker-app/manifest.json',
+      silent: false,
+    });
+  } catch(e) {
+    showToast(`${title} — ${body}`, 5000);
+  }
+}
+
+function showToast(msg, duration) {
+  duration = duration || 3200;
+  const el = document.getElementById('toast');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), duration);
+}
+
+async function requestNotifPermission() {
+  if (!('Notification' in window)) {
+    alert('This browser does not support notifications.\nTip: Add the app to your Home Screen first, then try again.');
+    return;
+  }
+  const perm = await Notification.requestPermission();
+  if (perm === 'granted') {
+    showToast('✅ Notifications enabled!');
+    initNotifications();
+  } else if (perm === 'denied') {
+    showToast('⛔ Blocked — enable in device Settings', 5000);
+  }
+  openSettingsModal(); // refresh to show updated status
+}
+
 // ─── Settings / Backup ────────────────────────────────────────────────────────
 function openSettingsModal() {
   document.getElementById('modal').innerHTML = `<div class="modal-inner">
@@ -1173,6 +1647,51 @@ function openSettingsModal() {
         <div style="font-size:13px;color:var(--sub);margin-top:2px">Restore data from a saved file</div>
       </div>
     </button>
+    <div style="height:1px;background:var(--border);margin-bottom:16px"></div>
+    <div style="font-size:12px;font-weight:700;color:var(--sub);letter-spacing:.6px;text-transform:uppercase;margin-bottom:12px">Insights</div>
+    <button onclick="openReportModal()" style="width:100%;padding:18px;border-radius:18px;background:var(--bg);border:2px solid var(--border);cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:14px;margin-bottom:24px;text-align:left">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--sub)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0">
+        <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+      </svg>
+      <div>
+        <div style="font-size:17px;font-weight:700;color:var(--text)">Weekly Report</div>
+        <div style="font-size:13px;color:var(--sub);margin-top:2px">Habits, routines &amp; task stats</div>
+      </div>
+    </button>
+    <div style="height:1px;background:var(--border);margin-bottom:20px"></div>
+    <div style="font-size:12px;font-weight:700;color:var(--sub);letter-spacing:.6px;text-transform:uppercase;margin-bottom:14px">🔔 Reminders</div>
+    ${(function(){
+      const sup  = 'Notification' in window;
+      const perm = sup ? Notification.permission : 'unsupported';
+      if (!sup) return `<div style="font-size:14px;color:var(--sub);margin-bottom:16px">Add the app to your Home Screen to enable notifications.</div>`;
+      if (perm === 'granted') return `
+        <div style="display:flex;align-items:center;gap:10px;background:#F0FFF4;border-radius:14px;padding:14px 16px;margin-bottom:16px">
+          <span style="font-size:22px">✅</span>
+          <span style="font-size:15px;font-weight:700;color:var(--ok)">Notifications on</span>
+        </div>
+        <div style="font-size:13px;color:var(--sub);margin-bottom:8px;font-weight:600">Daily habit reminder</div>
+        <input type="time" id="habit-notif-time" value="${S.notifHabitTime}"
+          style="width:100%;padding:13px 16px;border-radius:14px;border:2px solid var(--border);font-size:16px;font-family:inherit;color:var(--text);background:var(--bg);margin-bottom:12px"
+          onchange="S.notifHabitTime=this.value;persist();showToast('✅ Habit reminder set for '+this.value)">
+        <div style="font-size:12px;color:var(--sub);line-height:1.6;margin-bottom:16px">
+          🗓 Routine alerts → each routine's reminder time<br>
+          ✅ Habit reminder → fires above time if habits unfinished<br>
+          🎯 Task alert → 9 am if tasks are due today
+        </div>`;
+      if (perm === 'denied') return `
+        <div style="background:#FFF0F0;border-radius:14px;padding:14px 16px;margin-bottom:16px">
+          <div style="font-size:15px;font-weight:700;color:var(--red);margin-bottom:4px">⛔ Notifications blocked</div>
+          <div style="font-size:13px;color:var(--sub);line-height:1.5">Go to <strong>Settings → Apps → Safari → Notifications</strong> and allow, then reload the app.</div>
+        </div>`;
+      return `
+        <button onclick="requestNotifPermission()" style="width:100%;padding:18px;border-radius:18px;background:var(--pl);border:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:14px;margin-bottom:16px;text-align:left">
+          <span style="font-size:26px;flex-shrink:0">🔔</span>
+          <div>
+            <div style="font-size:17px;font-weight:700;color:var(--p)">Enable Reminders</div>
+            <div style="font-size:13px;color:var(--sub);margin-top:2px">Routines, habits &amp; task alerts</div>
+          </div>
+        </button>`;
+    })()}
     <div style="font-size:13px;color:#BBB;line-height:1.6;text-align:center">
       Your data stays on your device. Export before getting a new phone or reinstalling.
     </div>
@@ -1278,6 +1797,7 @@ if ('serviceWorker' in navigator) {
 // ─── Boot ──────────────────────────────────────────────────────────────────────
 loadData();
 render();
+initNotifications();
 </script>
 </body>
 </html>
