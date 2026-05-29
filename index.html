@@ -1888,9 +1888,16 @@ function renderMind() {
       <div class="mind-setup-sub">Your personal AI wellness companion — here to support your health journey with empathy, encouragement, and evidence-based guidance.</div>
       <div style="width:100%;text-align:left">
         <div style="font-size:13px;font-weight:700;color:var(--sub);margin-bottom:8px">Google Gemini API Key</div>
-        <input class="mind-key-input" type="password" id="gemini-key-inp"
-          placeholder="Paste your AIza… key here"
-          onkeydown="if(event.key==='Enter')saveGeminiKey()">
+        <div style="position:relative">
+          <input class="mind-key-input" type="password" id="gemini-key-inp"
+            placeholder="Paste your AIza… key here"
+            style="padding-right:48px"
+            onkeydown="if(event.key==='Enter')saveGeminiKey()">
+          <button onclick="(function(){var i=document.getElementById('gemini-key-inp');i.type=i.type==='password'?'text':'password'})()"
+            style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:18px;color:var(--sub);padding:4px">
+            👁
+          </button>
+        </div>
         <div style="font-size:12px;color:var(--sub);margin-top:8px;line-height:1.65">
           Your key is stored only on this device and never sent anywhere except Google's API.
           <br><a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--p);font-weight:700;text-decoration:none">Get a free key at Google AI Studio →</a>
@@ -1989,10 +1996,11 @@ async function sendChatMessage() {
     if (S.chatMessages.length > 40) S.chatMessages = S.chatMessages.slice(-40);
     persist();
   } catch(e) {
-    const errMsg = e.message?.includes('API key')
-      ? '⚠️ Invalid API key. Go to Settings → Mind to update it.'
-      : '⚠️ Couldn\'t connect right now. Check your internet and try again.';
-    S.chatMessages.push({ role: 'ai', text: errMsg });
+    console.error('Sage error:', e);
+    // Always show the real error text so we can diagnose it
+    const errMsg = `⚠️ ${e.message || 'Unknown error'}`;
+    // isError flag prevents this from being sent back to the API as a fake model reply
+    S.chatMessages.push({ role: 'ai', text: errMsg, isError: true });
     persist();
   }
 
@@ -2004,13 +2012,25 @@ async function sendChatMessage() {
 }
 
 async function callGemini() {
-  const contents = S.chatMessages.map(m => ({
-    role: m.role === 'user' ? 'user' : 'model',
-    parts: [{ text: m.text }]
-  }));
+  // Build a properly alternating conversation (user → model → user → model…)
+  // Filter errors, then merge any consecutive same-role messages
+  const clean = S.chatMessages.filter(m => !m.isError);
+  const contents = [];
+  for (const m of clean) {
+    const role = m.role === 'user' ? 'user' : 'model';
+    if (contents.length && contents[contents.length - 1].role === role) {
+      // merge consecutive same-role messages
+      contents[contents.length - 1].parts[0].text += '\n' + m.text;
+    } else {
+      contents.push({ role, parts: [{ text: m.text }] });
+    }
+  }
+  // Must start with a user turn
+  if (contents.length && contents[0].role !== 'user') contents.shift();
 
+  const key = S.geminiKey.trim();
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${S.geminiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
