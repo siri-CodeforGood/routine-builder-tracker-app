@@ -409,6 +409,15 @@ input[type=time]{font-size:17px}
 .tsec-head.tsec-overdue{color:var(--red)}
 .tsec-head.tsec-ok{color:var(--ok)}
 
+/* ─── Sage action confirm ─── */
+.action-confirm{display:flex;gap:8px;margin-top:10px}
+.btn-confirm{flex:1;padding:11px;border-radius:14px;border:none;cursor:pointer;font-family:inherit;font-size:14px;font-weight:700;background:var(--p);color:#fff}
+.btn-confirm:active{opacity:.8}
+.btn-reject{flex:1;padding:11px;border-radius:14px;border:2px solid var(--border);cursor:pointer;font-family:inherit;font-size:14px;font-weight:700;background:var(--bg);color:var(--sub)}
+.btn-reject:active{opacity:.7}
+.action-done{margin-top:8px;font-size:13px;font-weight:700;color:var(--ok)}
+.action-cancelled{margin-top:8px;font-size:13px;font-weight:600;color:var(--sub)}
+
 /* ─── Report ─── */
 .rpt-sec{font-size:12px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px}
 .rpt-pill{padding:8px 18px;border-radius:20px;border:none;cursor:pointer;font-family:inherit;font-size:14px;font-weight:700;white-space:nowrap;background:var(--bg);color:var(--sub);transition:all .2s;flex-shrink:0}
@@ -1815,17 +1824,31 @@ function saveTask() {
 // ─── Mind / AI Chat ────────────────────────────────────────────────────────────
 let _chatBusy = false;
 
-const SAGE_SYSTEM_PROMPT = `You are Sage, a wellness AI companion inside "My Routines" — a personal health app. You have access to the user's live app data (routines, habits, tasks, meals) and should use it to give specific, personalised answers.
+const SAGE_SYSTEM_PROMPT = `You are Sage, a wellness AI companion inside "My Routines" — a personal health app. You have access to the user's live app data (routines, habits, tasks, meals) and can also make changes to the app when asked.
 
 CRITICAL RULES:
 • Never start with "That's a great/fantastic/wonderful question" — get straight to the point
-• Always reference the user's ACTUAL data by name when it's relevant (e.g. "Your Morning Routine is 3/9 done today" or "Your water habit has a 5-day streak")
+• Always reference the user's ACTUAL data by name when relevant (e.g. "Your Morning Routine is 3/9 done today")
 • Be direct, warm, and specific — not generic or vague
 • Keep replies concise: 3-6 sentences max unless a detailed breakdown is asked for
 • Never diagnose or prescribe; suggest consulting a doctor for medical decisions
-• When asked what to improve or what's missing, look at the actual routine/habit data and give a real opinion
 • When the user seems stressed or low, offer a short breathing or grounding exercise
-• Use plain conversational text — no bullet-point walls, no markdown headers in chat`;
+• Use plain conversational text — no bullet-point walls, no markdown headers in chat
+
+MAKING CHANGES:
+When the user asks you to add, remove, or update something in their app, propose the change clearly, then on its own line at the very end output exactly one action block (no other text after it):
+[ACTION:{"type":"...","data":{...}}]
+
+Supported action types and their data fields:
+- add_task_to_routine   → data: {routineId, routineName, taskName}
+- remove_task_from_routine → data: {routineId, routineName, taskId, taskName}
+- add_habit             → data: {name, emoji}
+- remove_habit          → data: {habitId, habitName}
+- add_todo              → data: {name, priority ("normal"|"low"|"medium"|"high"), dueDate (YYYY-MM-DD or null)}
+- mark_habit_done       → data: {habitId, habitName}
+- mark_todo_done        → data: {taskId, taskName}
+
+Use the exact IDs from the app data provided. Only output ONE action block per response.`;
 
 function mdToHtml(text) {
   // Safe render: escape first, then apply light markdown
@@ -1915,15 +1938,35 @@ function renderMind() {
       <div><div class="chat-bubble ai">Hi there 💜 I'm Sage, your wellness companion.<br><br>I'm here for you — whether you want to talk about how you're feeling today, get tips on your routines, reflect on your habits, or just need a kind ear.<br><br>How are you doing right now?</div></div>
     </div>`;
   } else {
-    msgsHtml = msgs.map(m => m.role === 'user'
-      ? `<div class="chat-bubble-wrap user">
+    msgsHtml = msgs.map((m, i) => {
+      if (m.role === 'user') {
+        return `<div class="chat-bubble-wrap user">
           <div class="chat-bubble user">${esc(m.text).replace(/\n/g,'<br>')}</div>
-         </div>`
-      : `<div class="chat-bubble-wrap ai">
-          <div class="chat-avatar">✨</div>
-          <div><div class="chat-bubble ai">${mdToHtml(m.text)}</div></div>
-         </div>`
-    ).join('');
+        </div>`;
+      }
+      const action      = parseAction(m.text);
+      const displayText = action ? stripAction(m.text) : m.text;
+      let actionHtml = '';
+      if (action) {
+        if (m.actionState === 'done') {
+          actionHtml = `<div class="action-done">✅ Done — app updated!</div>`;
+        } else if (m.actionState === 'cancelled') {
+          actionHtml = `<div class="action-cancelled">✕ Cancelled</div>`;
+        } else {
+          actionHtml = `<div class="action-confirm">
+            <button class="btn-confirm" onclick="confirmAction(${i})">✓ Confirm</button>
+            <button class="btn-reject"  onclick="rejectAction(${i})">✕ Cancel</button>
+          </div>`;
+        }
+      }
+      return `<div class="chat-bubble-wrap ai">
+        <div class="chat-avatar">✨</div>
+        <div>
+          <div class="chat-bubble ai">${mdToHtml(displayText)}</div>
+          ${actionHtml}
+        </div>
+      </div>`;
+    }).join('');
   }
 
   return `
@@ -2006,23 +2049,91 @@ async function sendChatMessage() {
   }
 }
 
+// ─── Sage Actions ──────────────────────────────────────────────────────────────
+function parseAction(text) {
+  const match = text.match(/\[ACTION:([\s\S]*?)\]/);
+  if (!match) return null;
+  try { return JSON.parse(match[1]); } catch { return null; }
+}
+
+function stripAction(text) {
+  return text.replace(/\[ACTION:[\s\S]*?\]/, '').trim();
+}
+
+function executeAction(action) {
+  const d = action.data || {};
+  switch (action.type) {
+    case 'add_task_to_routine': {
+      const r = S.routines.find(r => r.id === d.routineId);
+      if (r) r.tasks.push({ id: uid(), name: d.taskName });
+      break;
+    }
+    case 'remove_task_from_routine': {
+      const r = S.routines.find(r => r.id === d.routineId);
+      if (r) r.tasks = r.tasks.filter(t => t.id !== d.taskId && t.name !== d.taskName);
+      break;
+    }
+    case 'add_habit':
+      S.habits.push({ id: uid(), name: d.name, emoji: d.emoji || '✨', completedDates: [] });
+      break;
+    case 'remove_habit':
+      S.habits = S.habits.filter(h => h.id !== d.habitId);
+      break;
+    case 'add_todo':
+      S.tasks.push({ id: uid(), name: d.name, priority: d.priority || 'normal', done: false, dueDate: d.dueDate || null, dueTime: null });
+      break;
+    case 'mark_habit_done': {
+      const today = todayKey();
+      S.habits = S.habits.map(h => h.id === d.habitId && !h.completedDates.includes(today)
+        ? { ...h, completedDates: [...h.completedDates, today] } : h);
+      break;
+    }
+    case 'mark_todo_done':
+      S.tasks = S.tasks.map(t => t.id === d.taskId ? { ...t, done: true } : t);
+      break;
+  }
+  persist();
+}
+
+function confirmAction(idx) {
+  const msg = S.chatMessages[idx];
+  if (!msg) return;
+  const action = parseAction(msg.text);
+  if (action) executeAction(action);
+  msg.actionState = 'done';
+  persist();
+  document.getElementById('screen').innerHTML = renderMind();
+  scrollChatToBottom();
+  showToast('✅ Done!');
+}
+
+function rejectAction(idx) {
+  const msg = S.chatMessages[idx];
+  if (!msg) return;
+  msg.actionState = 'cancelled';
+  persist();
+  document.getElementById('screen').innerHTML = renderMind();
+  scrollChatToBottom();
+}
+
 function buildAppContext() {
   const today = todayKey();
   const comp  = S.completions[today] || {};
   const lines = [`Today's date: ${today}`];
 
-  // Routines progress
+  // Routines progress (with IDs so Sage can target them in actions)
   if (S.routines.length) {
     lines.push('\nROUTINES (today):');
     S.routines.forEach(r => {
       const done  = r.tasks.filter(t => comp[r.id]?.[t.id]).length;
       const total = r.tasks.length;
       const pct   = total ? Math.round(done/total*100) : 0;
-      lines.push(`  • ${r.emoji} ${r.name}: ${done}/${total} tasks (${pct}%)`);
+      lines.push(`  • ${r.emoji} ${r.name} [id:${r.id}]: ${done}/${total} tasks (${pct}%)`);
+      r.tasks.forEach(t => lines.push(`      - ${t.name} [id:${t.id}]`));
     });
   }
 
-  // Habits
+  // Habits (with IDs)
   if (S.habits.length) {
     lines.push('\nHABITS:');
     const last7 = rptDays(7);
@@ -2030,11 +2141,11 @@ function buildAppContext() {
       const doneToday = h.completedDates.includes(today);
       const streak    = calcStreak(h.completedDates);
       const week      = last7.filter(d => h.completedDates.includes(d)).length;
-      lines.push(`  • ${h.emoji} ${h.name}: ${doneToday ? '✓ done today' : '✗ not yet today'}, streak ${streak}d, ${week}/7 this week`);
+      lines.push(`  • ${h.emoji} ${h.name} [id:${h.id}]: ${doneToday ? '✓ done today' : '✗ not yet today'}, streak ${streak}d, ${week}/7 this week`);
     });
   }
 
-  // Tasks
+  // Tasks (with IDs)
   if (S.tasks.length) {
     const overdue  = S.tasks.filter(t => !t.done && t.dueDate && t.dueDate < today);
     const dueToday = S.tasks.filter(t => !t.done && t.dueDate === today);
@@ -2042,9 +2153,9 @@ function buildAppContext() {
     const pending  = S.tasks.filter(t => !t.done).length;
     const done     = S.tasks.filter(t =>  t.done).length;
     lines.push(`\nTASKS: ${done} done, ${pending} pending`);
-    if (overdue.length)  lines.push(`  Overdue: ${overdue.map(t=>t.name).join('; ')}`);
-    if (dueToday.length) lines.push(`  Due today: ${dueToday.map(t=>t.name).join('; ')}`);
-    if (highPri.length)  lines.push(`  High priority: ${highPri.map(t=>t.name).join('; ')}`);
+    if (overdue.length)  lines.push(`  Overdue: ${overdue.map(t=>`${t.name} [id:${t.id}]`).join('; ')}`);
+    if (dueToday.length) lines.push(`  Due today: ${dueToday.map(t=>`${t.name} [id:${t.id}]`).join('; ')}`);
+    if (highPri.length)  lines.push(`  High priority: ${highPri.map(t=>`${t.name} [id:${t.id}]`).join('; ')}`);
   }
 
   // Today's meals
