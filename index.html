@@ -2011,6 +2011,58 @@ async function sendChatMessage() {
   }
 }
 
+function buildAppContext() {
+  const today = todayKey();
+  const comp  = S.completions[today] || {};
+  const lines = [`Today's date: ${today}`];
+
+  // Routines progress
+  if (S.routines.length) {
+    lines.push('\nROUTINES (today):');
+    S.routines.forEach(r => {
+      const done  = r.tasks.filter(t => comp[r.id]?.[t.id]).length;
+      const total = r.tasks.length;
+      const pct   = total ? Math.round(done/total*100) : 0;
+      lines.push(`  • ${r.emoji} ${r.name}: ${done}/${total} tasks (${pct}%)`);
+    });
+  }
+
+  // Habits
+  if (S.habits.length) {
+    lines.push('\nHABITS:');
+    const last7 = rptDays(7);
+    S.habits.forEach(h => {
+      const doneToday = h.completedDates.includes(today);
+      const streak    = calcStreak(h.completedDates);
+      const week      = last7.filter(d => h.completedDates.includes(d)).length;
+      lines.push(`  • ${h.emoji} ${h.name}: ${doneToday ? '✓ done today' : '✗ not yet today'}, streak ${streak}d, ${week}/7 this week`);
+    });
+  }
+
+  // Tasks
+  if (S.tasks.length) {
+    const overdue  = S.tasks.filter(t => !t.done && t.dueDate && t.dueDate < today);
+    const dueToday = S.tasks.filter(t => !t.done && t.dueDate === today);
+    const highPri  = S.tasks.filter(t => !t.done && t.priority === 'high');
+    const pending  = S.tasks.filter(t => !t.done).length;
+    const done     = S.tasks.filter(t =>  t.done).length;
+    lines.push(`\nTASKS: ${done} done, ${pending} pending`);
+    if (overdue.length)  lines.push(`  Overdue: ${overdue.map(t=>t.name).join('; ')}`);
+    if (dueToday.length) lines.push(`  Due today: ${dueToday.map(t=>t.name).join('; ')}`);
+    if (highPri.length)  lines.push(`  High priority: ${highPri.map(t=>t.name).join('; ')}`);
+  }
+
+  // Today's meals
+  const mKey = `w${mealCycleWeek()}-${todayDow()}`;
+  const todayMeals = S.meals[mKey] || {};
+  const mealParts = ['breakfast','lunch','dinner']
+    .filter(s => todayMeals[s]?.length)
+    .map(s => `${s}: ${[].concat(todayMeals[s]).join(', ')}`);
+  if (mealParts.length) lines.push(`\nTODAY'S MEALS: ${mealParts.join(' | ')}`);
+
+  return lines.join('\n');
+}
+
 async function callGemini() {
   // Build a properly alternating conversation (user → model → user → model…)
   // Filter errors, then merge any consecutive same-role messages
@@ -2035,7 +2087,7 @@ async function callGemini() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        system_instruction: { parts: [{ text: SAGE_SYSTEM_PROMPT }] },
+        system_instruction: { parts: [{ text: SAGE_SYSTEM_PROMPT + '\n\n---\nUSER\'S LIVE APP DATA:\n' + buildAppContext() }] },
         contents,
         generationConfig: {
           temperature: 0.75,
