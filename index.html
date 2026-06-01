@@ -3023,32 +3023,30 @@ function checkNotifications() {
     }
   }
 
-  // 3. Tasks — individual alert at their dueTime (like routine reminders)
+  // 3. Tasks with a specific dueTime — fire at that exact minute (like routines)
   S.tasks.forEach(t => {
-    if (t.done || !t.dueDate || !t.dueTime) return;
-    // Fire if it's due today or overdue and we haven't alerted yet today
-    if (t.dueDate > today) return;
+    if (t.done || !t.dueDate || !t.dueTime || t.dueDate !== today) return;
     const key = `task-${t.id}-${today}`;
     if (fired[key]) return;
-    const isOverdue = t.dueDate < today;
-    const timeMatch = t.dueTime === hhmm;
-    // For overdue tasks with a time: fire at 9 AM if we haven't yet
-    if (isOverdue && hhmm === '09:00') {
-      fireNotif(`🎯 Overdue: ${t.name}`, `Was due ${t.dueDate} at ${fmt12(t.dueTime)}`, key);
-      fired[key] = 1;
-    } else if (!isOverdue && timeMatch) {
+    if (t.dueTime === hhmm) {
       fireNotif(`🎯 ${t.name}`, 'Task is due now!', key);
       fired[key] = 1;
     }
   });
 
-  // 4. Summary at 9 AM for tasks with no specific due time
+  // 4. Summary for tasks with no specific time OR overdue tasks
+  //    Fires on the FIRST check at or after 9 AM — so it works whether
+  //    the app was open at exactly 9:00 or opened at noon.
   const taskSummaryKey = `tasks-summary-${today}`;
-  if (!fired[taskSummaryKey] && hhmm === '09:00') {
-    const noTime = S.tasks.filter(t => !t.done && t.dueDate && t.dueDate <= today && !t.dueTime);
-    if (noTime.length > 0) {
-      fireNotif('🎯 Tasks Due Today',
-        `${noTime.length} task${noTime.length>1?'s':''} need your attention`, taskSummaryKey);
+  if (!fired[taskSummaryKey] && hhmm >= '09:00') {
+    const dueNoTime = S.tasks.filter(t => !t.done && t.dueDate === today && !t.dueTime);
+    const overdue   = S.tasks.filter(t => !t.done && t.dueDate && t.dueDate < today);
+    const total = dueNoTime.length + overdue.length;
+    if (total > 0) {
+      const body = overdue.length > 0
+        ? `${overdue.length} overdue + ${dueNoTime.length} due today`
+        : `${total} task${total > 1 ? 's' : ''} need your attention`;
+      fireNotif('🎯 Tasks Due', body, taskSummaryKey);
       fired[taskSummaryKey] = 1;
     }
   }
@@ -3057,6 +3055,8 @@ function checkNotifications() {
 }
 
 function checkTasksOnOpen() {
+  // Just a quick in-app toast on open — the real notification fires via
+  // checkNotifications() which runs immediately after this and every minute.
   const today    = todayKey();
   const overdue  = S.tasks.filter(t => !t.done && t.dueDate && t.dueDate <  today).length;
   const dueToday = S.tasks.filter(t => !t.done && t.dueDate && t.dueDate === today).length;
@@ -3064,19 +3064,7 @@ function checkTasksOnOpen() {
   const msg = overdue > 0
     ? `🎯 ${overdue} overdue · ${dueToday} due today`
     : `🎯 ${dueToday} task${dueToday>1?'s':''} due today`;
-  // Show as a real notification if permission granted, otherwise toast
-  if ('Notification' in window && Notification.permission === 'granted') {
-    const openKey = `tasks-open-${today}`;
-    let fired = {};
-    try { fired = JSON.parse(localStorage.getItem('notifFired') || '{}'); } catch(e) {}
-    if (!fired[openKey]) {
-      fireNotif('🎯 Tasks Need Attention', msg.replace('🎯 ', ''), openKey);
-      fired[openKey] = 1;
-      localStorage.setItem('notifFired', JSON.stringify(fired));
-    }
-  } else {
-    showToast(msg, 4500);
-  }
+  showToast(msg, 4500);
 }
 
 function fireNotif(title, body, tag) {

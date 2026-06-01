@@ -1,4 +1,4 @@
-const CACHE = 'routines-v6';
+const CACHE = 'routines-v7';
 const ASSETS = [
   '/routine-builder-tracker-app/',
   '/routine-builder-tracker-app/index.html',
